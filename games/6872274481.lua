@@ -1,4 +1,5 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
 	func()
 end
@@ -8831,56 +8832,6 @@ run(function()
     })
 end)
 run(function()
-	local Ambience1 = vape.Categories.Utility:CreateModule({
-		Name = "Ambience 1",
-		Function = function(callback)
-			local lighting = game:GetService("Lighting")
-			if callback then
-				local sky = Instance.new("Sky")
-				sky.Name = "Ambience1_Sky"
-				local id = "rbxassetid://122785120445164"
-				sky.SkyboxBk = id
-				sky.SkyboxDn = id
-				sky.SkyboxFt = id
-				sky.SkyboxLf = id
-				sky.SkyboxRt = id
-				sky.SkyboxUp = id
-				sky.Parent = lighting
-			else
-				local sky = lighting:FindFirstChild("Ambience1_Sky")
-				if sky then sky:Destroy() end
-			end
-		end,
-		Tooltip = "Ambience 1"
-	})
-end)
-
-run(function()
-	local Ambience2 = vape.Categories.Utility:CreateModule({
-		Name = "Ambience 2",
-		Function = function(callback)
-			local lighting = game:GetService("Lighting")
-			if callback then
-				local sky = Instance.new("Sky")
-				sky.Name = "Ambience2_Sky"
-				local id = "rbxassetid://121826915456627"
-				sky.SkyboxBk = id
-				sky.SkyboxDn = id
-				sky.SkyboxFt = id
-				sky.SkyboxLf = id
-				sky.SkyboxRt = id
-				sky.SkyboxUp = id
-				sky.Parent = lighting
-			else
-				local sky = lighting:FindFirstChild("Ambience2_Sky")
-				if sky then sky:Destroy() end
-			end
-		end,
-		Tooltip = "Ambience 2"
-	})
-end)
-
-run(function()
     local ZoomUnlocker
     ZoomUnlocker = vape.Categories.Utility:CreateModule({
         Name = "Zoom Unlocker",
@@ -8892,240 +8843,7 @@ run(function()
         Tooltip = "Makes it so you can zoom infinitely"
     })
 end)
-
-run(function()
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local LocalPlayer = Players.LocalPlayer
-    local loopConn
-    local invisibilityEnabled = false
-
-    local function modifyHRP(onEnable)
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local hrp = character:WaitForChild("HumanoidRootPart")
-
-        if onEnable then
-            hrp.Transparency = 0.3
-            hrp.Color = Color3.new(1, 1, 1)
-            hrp.Material = Enum.Material.Plastic
-        else
-            hrp.Transparency = 1
-        end
-
-        hrp.CanCollide = true
-        hrp.Anchored = false
-    end
-
-    local function setCharacterVisibility(isVisible)
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                part.LocalTransparencyModifier = isVisible and 0 or 1
-            elseif part:IsA("Decal") then
-                part.Transparency = isVisible and 0 or 1
-            elseif part:IsA("LayerCollector") then
-                part.Enabled = isVisible
-            end
-        end
-    end
-
-    local function startLoop(Character)
-        local Humanoid = Character:FindFirstChild("Humanoid")
-        if not Humanoid or Humanoid.RigType == Enum.HumanoidRigType.R6 then return end
-
-        local RootPart = Character:FindFirstChild("HumanoidRootPart")
-        if not RootPart then return end
-
-        if loopConn then loopConn:Disconnect() end
-
-        loopConn = RunService.Heartbeat:Connect(function()
-            if not invisibilityEnabled or not Character or not Humanoid or not RootPart then return end
-
-            -- 
-            for _, part in ipairs(Character:GetDescendants()) do
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                    part.LocalTransparencyModifier = 1
-                elseif part:IsA("Decal") then
-                    part.Transparency = 1
-                elseif part:IsA("LayerCollector") then
-                    part.Enabled = false
-                end
-            end
-
-            -- 
-            local oldcf = RootPart.CFrame
-            local oldcamoffset = Humanoid.CameraOffset
-            local newcf = RootPart.CFrame - Vector3.new(0, Humanoid.HipHeight + (RootPart.Size.Y / 2) - 1, 0)
-
-            RootPart.CFrame = newcf * CFrame.Angles(0, 0, math.rad(180))
-            Humanoid.CameraOffset = Vector3.new(0, -5, 0)
-
-            local anim = Instance.new("Animation")
-            anim.AnimationId = "http://www.roblox.com/asset/?id=11360825341"
-            local loaded = Humanoid.Animator:LoadAnimation(anim)
-            loaded.Priority = Enum.AnimationPriority.Action4
-            loaded:Play()
-            loaded.TimePosition = 0.2
-            loaded:AdjustSpeed(0)
-
-            RunService.RenderStepped:Wait()
-            loaded:Stop()
-
-            Humanoid.CameraOffset = oldcamoffset
-            RootPart.CFrame = oldcf
-        end)
-    end
-
-    Invisibility = vape.Categories.Utility:CreateModule({
-        Name = 'Invisibility',
-        Function = function(callback)
-            invisibilityEnabled = callback
-            local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-
-            if callback then
-                notif('Invisibilty', 'When You die turn it off and enable it again or you are visible ', 4)
-                modifyHRP(true)
-                setCharacterVisibility(false)
-                startLoop(character)
-            else
-                if loopConn then
-                    loopConn:Disconnect()
-                    loopConn = nil
-                end
-                modifyHRP(false)
-                setCharacterVisibility(true)
-            end
-        end,
-        Default = false,
-        Tooltip = ""
-    })
-
-    LocalPlayer.CharacterAdded:Connect(function()
-        if invisibilityEnabled then
-            task.wait(0.5)
-            Invisibility.Function(true)
-        end
-    end)
-end)
-
-run(function()
-    local MotionBlurConnection
-    local MotionBlurEffect
-
-    MotionBlur = vape.Categories.Utility:CreateModule({
-        Name = 'MotionBlur',
-        Function = function(callback)
-            local Lighting = game:GetService("Lighting")
-            local RunService = game:GetService("RunService")
-            local Players = game:GetService("Players")
-            local player = Players.LocalPlayer
-            local camera = workspace.CurrentCamera
-
-            if callback then
-                local blur = Instance.new("BlurEffect")
-                blur.Name = "MotionBlur"
-                blur.Size = 0
-                blur.Parent = Lighting
-                MotionBlurEffect = blur
-
-                local character = player.Character or player.CharacterAdded:Wait()
-                local root = character:WaitForChild("HumanoidRootPart")
-
-                local lastLook = camera.CFrame.LookVector
-                local lastPosition = root.Position
-                local currentBlur = 0
-
-                local function lerp(a, b, t)
-                    return a + (b - a) * t
-                end
-
-                MotionBlurConnection = RunService.RenderStepped:Connect(function()
-                    if not root or not root.Parent then return end
-                    local look = camera.CFrame.LookVector
-                    local pos = root.Position
-
-                    local rotDelta = math.acos(math.clamp(look:Dot(lastLook), -1, 1))
-                    local rotBlur = math.clamp(rotDelta * 120, 0, 15)
-                    lastLook = look
-
-                    local moveDelta = (pos - lastPosition).Magnitude
-                    local moveBlur = math.clamp(moveDelta * 2.2, 0, 15)
-                    lastPosition = pos
-
-                    local targetBlur = math.clamp(rotBlur + moveBlur, 0, 25)
-                    currentBlur = lerp(currentBlur, targetBlur, 0.2)
-                    blur.Size = currentBlur
-                end)
-            else
-                if MotionBlurEffect then
-                    MotionBlurEffect:Destroy()
-                    MotionBlurEffect = nil
-                end
-                if MotionBlurConnection then
-                    MotionBlurConnection:Disconnect()
-                    MotionBlurConnection = nil
-                end
-            end
-        end,
-        Default = false,
-        Tooltip = "Self Explanatory"
-    })
-end)
-
--- NIGGERS!!!!
--- who wrote this?
-run(function()
-        local BetterStrafe: table = {["Enabled"] = false};
-        local findNearestPlayer: () -> Player? = function(): Player?
-                local closest: Player? = nil;
-                local closestDist: number? = nil;
-                local myhrp: BasePart? = lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") :: BasePart?;
-                if not myhrp then return nil; end;
-                for _: number, v: Player in next, playersService:GetPlayers() do
-                        if v ~= lplr and v.Character then
-                                local hrp: BasePart? = v.Character:FindFirstChild("HumanoidRootPart") :: BasePart?;
-                                if hrp then
-                                        local dist: number = (hrp.Position - myhrp.Position).Magnitude;
-                                        if not closestDist or dist < closestDist then
-                                                closest = v;
-                                                closestDist = dist;
-                                        end;
-                                end;
-                        end;
-                end;
-                return closest;
-        end;
-
-        BetterStrafe = vape.Categories.Combat:CreateModule({
-                ["Name"] = "BetterStrafe",
-                ["Function"] = function(callback: boolean): void
-                        if callback then
-                                connection = runService.Heartbeat:Connect(function()
-                                        local hum: Humanoid? = lplr.Character and lplr.Character:FindFirstChildOfClass("Humanoid") :: Humanoid?;
-                                        local hrp: BasePart? = lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") :: BasePart?;
-                                        if not (hum and hrp) then return; end;
-                                        local target: Player? = findNearestPlayer();
-                                        if target and target.Character then
-                                                local targetHum: Humanoid? = target.Character:FindFirstChildOfClass("Humanoid") :: Humanoid?;
-                                                local targetHRP: BasePart? = target.Character:FindFirstChild("HumanoidRootPart") :: BasePart?;
-                                                if targetHum and targetHum.Health > 0 and targetHRP then
-                                                        hum:MoveTo(targetHRP.Position);
-                                                end;
-                                        end;
-                                end);
-
-                                return function(): nil
-                                        if connection then
-                                                connection:Disconnect();
-                                        end;
-                                end;
-                        end;
-                        return nil;
-                end,
-		["Tooltip"] = "code still aids"
-        });
-end);
-																																																																			
+			
 run(function()
     local InfiniteJump
     local Velocity
@@ -9177,60 +8895,6 @@ run(function()
     })
 end)
 																																																																																																																																																																																																																																																																																																																													            																																																																																																																																																															
-run(function()
-    local AutoCorrect
-    local blacklistedwords = {
-        'hack',
-        'hax',
-        'cheat'
-    }
-
-    local function getWord(msg)
-		msg = string.lower(tostring(msg))
-        for i,v in blacklistedwords do
-            if string.find(tostring(msg), v) then
-                return true
-            end
-        end
-
-        return false
-    end
-
-    local function sendmsg(msg)
-        if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-            textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(msg)
-        else
-            replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(msg, 'All')
-        end
-    end
-
-    AutoCorrect = vape.Categories.Utility:CreateModule({
-        Name = 'AutoCorrect',
-        Function = function(callback)
-            if callback then
-                for i,v in playersService:GetPlayers() do
-                    if v ~= lplr then
-                        AutoCorrect:Clean(v.Chatted:Connect(function(msg)
-                            if getWord(msg) then
-                                sendmsg('Actually, '..v.Name..' it\'s called "Exploiters/Exploits".')
-                            end
-                        end))
-                    end
-                end
-
-				AutoCorrect:Clean(playersService.PlayerAdded:Connect(function(plr)
-                    AutoCorrect:Clean(plr.Chatted:Connect(function(msg)
-						if getWord(msg) then
-							sendmsg('Actually, '..plr.Name..' it\'s called "Exploiters/Exploits".')
-						end
-					end))
-                end))
-            end
-        end,
-        Tooltip = 'Automatically corrects someone for using the incorrect terminology.'
-    })
-end)
-
 run(function()
     local Lighting = game:GetService("Lighting")
 
@@ -9311,35 +8975,6 @@ run(function()
         end
     })
 end)																																																																																																																																																															
-run(function()
-    local PartyPopperExploit
-	PartyPopperExploit = vape.Categories.Utility:CreateModule({
-        Name = "PartyPopperExploit",
-        Function = function(callback)
-            if callback then
-                PartyPopperExploit:Clean(runService.Heartbeat:Connect(function()
-                    bedwars.AbilityController:useAbility('PARTY_POPPER')
-                end))
-            end
-        end,
-        Tooltip = 'LETSS PARTYYYYYY'
-    })
-end)
-
-run(function()
-    local TrainWhistleExploit
-	TrainWhistleExploit = vape.Categories.Utility:CreateModule({
-        Name = 'TrainWhistleExploit',
-        Function = function(callback)
-            if callback then
-                TrainWhistleExploit:Clean(runService.Heartbeat:Connect(function()
-                    bedwars.AbilityController:useAbility('TRAIN_WHISTLE')
-                end))
-            end
-        end,
-        Tooltip = 'Makes you a train'
-    })
-end)
 
 run(function()
 	local HotbarVisuals: table = {}
@@ -9531,377 +9166,7 @@ run(function()
 	HotbarHighlightColor.Object.Visible = false;
 end);
 
-run(function()
-	local FakeLag = {Enabled = false}
-	local FakeLagUsage = {Value = "Blatant"}
-	local FakeLagSpeed = {Enabled = false}
-	local FakeLagDelay1 = {Value = 2}
-	local FakeLagDelay2 = {Value = 7}
-	local FakeLagDelayLegit = {Value = 3}
-	local FakeLagSpeed1 = {Value = 22}
-	local FakeLagSpeed2 = {Value = 18}
-	local FakeLagSpeed3 = {Value = 20}
-	local FakeLagSpeed4 = {Value = 2.7}
-	local FakeLagSpeed5 = {Value = 1.5}
-	local function ChangeSpeeds() -- this won't work with speed but ok
-		entitylib.character.Humanoid.WalkSpeed = FakeLagSpeed1.Value
-		task.wait(FakeLagSpeed4.Value / 10)
-		entitylib.character.Humanoid.WalkSpeed = FakeLagSpeed2.Value
-		task.wait(FakeLagSpeed5.Value / 10)
-		entitylib.character.Humanoid.WalkSpeed = FakeLagSpeed3.Value
-	end
-	FakeLag = vape.Categories.Utility:CreateModule({
-		Name = "FakeLag",
-        Tooltip = "Makes people think you're laggy",
-		Function = function(callback)
-			if callback then
-				task.spawn(function()
-					repeat task.wait()
-						if FakeLagUsage.Value == "Blatant" then
-							entitylib.character.HumanoidRootPart.Anchored = true
-							task.wait(FakeLagDelay1.Value / 10)
-							entitylib.character.HumanoidRootPart.Anchored = false
-							ChangeSpeeds()
-							task.wait(FakeLagDelay2.Value/10)
-						elseif FakeLagUsage.Value == "Legit" then
-							entitylib.character.HumanoidRootPart.Anchored = true
-							task.wait(FakeLagDelay1.Value / 10 + FakeLagDelayLegit.Value)
-							entitylib.character.HumanoidRootPart.Anchored = false
-							ChangeSpeeds()
-							task.wait(FakeLagDelay2.Value / 10 + FakeLagDelayLegit.Value)
-						end
-					until not FakeLag.Enabled
-				end)
-			else
-				if entitylib.character.HumanoidRootPart.Anchored then
-					entitylib.character.HumanoidRootPart.Anchored = false
-				end
-			end
-		end,
-		ExtraText = function()
-			return FakeLagUsage.Value
-		end
-	})
-FakeLagUsage = FakeLag:CreateDropdown({
-    Name = "Mode",
-    List = {
-        "Blatant",
-        "Legit"
-    },
-    Tooltip = "FakeLag Mode",
-    Function = function() end
-})
 
-FakeLagSpeed = FakeLag:CreateToggle({
-    Name = "Speed",
-    Default = false,
-    Tooltip = "Changes speed",
-    Function = function() end
-})
-
-FakeLagDelay1 = FakeLag:CreateSlider({
-    Name = "Anchored Delay",
-    Min = 0,
-    Max = 20,
-    Tooltip = "Anchored Delay Value",
-    Function = function() end,
-    Default = 2
-})
-
-FakeLagDelay2 = FakeLag:CreateSlider({
-    Name = "Unanchored Delay",
-    Min = 0,
-    Max = 20,
-    Tooltip = "Not Anchored Delay Value",
-    Function = function() end,
-    Default = 7
-})
-
-FakeLagDelayLegit = FakeLag:CreateSlider({
-    Name = "Legit",
-    Min = 1,
-    Max = 10,
-    Tooltip = "Legit Time",
-    Function = function() end,
-    Default = 3
-})
-
-FakeLagSpeed1 = FakeLag:CreateSlider({
-    Name = "Speed 1",
-    Min = 1,
-    Max = 22,
-    Tooltip = "Speed 1 Value",
-    Function = function() end,
-    Default = 22
-})
-
-FakeLagSpeed2 = FakeLag:CreateSlider({
-    Name = "Speed 2",
-    Min = 1,
-    Max = 20,
-    Tooltip = "Speed 2 Value",
-    Function = function() end,
-    Default = 18
-})
-
-FakeLagSpeed3 = FakeLag:CreateSlider({
-    Name = "Speed 3",
-    Min = 1,
-    Max = 20,
-    Tooltip = "Speed 3 Value",
-    Function = function() end,
-    Default = 20
-})
-
-FakeLagSpeed4 = FakeLag:CreateSlider({
-    Name = "Speed Delay 1",
-    Min = 1,
-    Max = 3,
-    Tooltip = "Speed Delay 1 Value",
-    Function = function() end,
-    Default = 2.7
-})
-
-FakeLagSpeed5 = FakeLag:CreateSlider({
-    Name = "Speed Delay 2",
-    Min = 1,
-    Max = 3,
-    Tooltip = "Speed Delay 2 Value",
-    Function = function() end,
-    Default = 1.5
-})
-end)
-
-run(function()
-    local AnimeImages
-    local AnimeSelection
-    local anime_imageids = {
-        ['Waifu1'] = 'rbxassetid://14417732284',
-        ['Waifu2'] = 'rbxassetid://14665237598'
-    }
-	
-    local animefunctions = {
-        Waifu1 = function() 
-            task.spawn(function()
-				local scale
-				local scaledUI = Instance.new('UIScale')
-				local Anime = Instance.new('ScreenGui')
-				local ImageLabel = Instance.new('ImageLabel')
-				local scalebla = Instance.new('Frame')
-				Anime.Name = 'Anime'
-				Anime.Parent = coreGui
-				Anime.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-				scalebla.Name = 'ScaledGui'
-				scalebla.Size = UDim2.fromScale(1, 1)
-				scalebla.BackgroundTransparency = 1
-				scalebla.Parent = gui
-				ImageLabel.Parent = Anime
-				ImageLabel.BackgroundColor3 = Color3.new(1, 1, 1)
-				ImageLabel.BackgroundTransparency = 1
-				ImageLabel.BorderColor3 = Color3.new(0, 0, 0)
-				ImageLabel.BorderSizePixel = 0
-				ImageLabel.AnchorPoint = Vector2.new(1, 0)
-				ImageLabel.Position = UDim2.new(1, -1, 0, -3)
-				ImageLabel.Size = UDim2.new(0, 244, 0, 410)
-				ImageLabel.Image = tostring(anime_imageids[tostring(AnimeSelection.Value)])
-				ImageLabel.ScaleType = Enum.ScaleType.Fit
-				scaledUI.Scale = math.max(ImageLabel.AbsoluteSize.X / 1920, 0.6)
-				scale = math.max(ImageLabel.AbsoluteSize.X / 1920, 0.6)
-				scaledUI.Parent = ImageLabel
-				scalebla.Size = UDim2.fromScale(1 / scale, 1 / scale)
-
-				AnimeImages:Clean(ImageLabel:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()
-					scaledUI.Scale = math.max(ImageLabel.AbsoluteSize.X / 1920, 0.6)
-				end))
-            end)
-        end,
-        
-        Waifu2 = function() 
-            task.spawn(function()
-				local scale
-				local scaledUI = Instance.new('UIScale')
-				local Anime = Instance.new('ScreenGui')
-				local ImageLabel = Instance.new('ImageLabel')
-				local scalebla = Instance.new('Frame')
-				Anime.Name = 'Anime'
-				Anime.Parent = coreGui
-				Anime.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-				scalebla.Name = 'ScaledGui'
-				scalebla.Size = UDim2.fromScale(1, 1)
-				scalebla.BackgroundTransparency = 1
-				scalebla.Parent = Anime
-				ImageLabel.Parent = Anime
-				ImageLabel.BackgroundColor3 = Color3.new(1, 1, 1)
-				ImageLabel.BackgroundTransparency = 1
-				ImageLabel.BorderColor3 = Color3.new(0, 0, 0)
-				ImageLabel.BorderSizePixel = 0
-				ImageLabel.AnchorPoint = Vector2.new(1, 0)
-				ImageLabel.Position = UDim2.new(1, -1, 0, -25)
-				ImageLabel.Size = UDim2.new(0, 244, 0, 410)
-				ImageLabel.Image = tostring(anime_imageids[tostring(AnimeSelection.Value)])
-				ImageLabel.ScaleType = Enum.ScaleType.Fit
-				scaledUI.Scale = math.max(ImageLabel.AbsoluteSize.X / 1920, 0.6)
-				scale = math.max(ImageLabel.AbsoluteSize.X / 1920, 0.6)
-				scaledUI.Parent = ImageLabel
-				scalebla.Size = UDim2.fromScale(1 / scale, 1 / scale)
-
-				AnimeImages:Clean(ImageLabel:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()
-					scaledUI.Scale = math.max(ImageLabel.AbsoluteSize.X / 1920, 0.6)
-				end))
-            end)
-        end
-    }
-
-    AnimeImages = vape.Categories.Utility:CreateModule({
-        Name = 'AnimeImages',
-        Function = function(callback) 
-            if callback then
-				for i,v in coreGui:GetChildren() do
-                    if v.Name == 'Anime' then
-                        v:Destroy()
-                    end
-                end
-
-                animefunctions[AnimeSelection.Value]()
-            else
-                for i,v in coreGui:GetChildren() do
-                    if v.Name == 'Anime' then
-                        v:Destroy()
-                    end
-                end
-            end
-        end,
-        Tooltip = 'Displays your desired image of Anime girls.',
-        ExtraText = function()
-            return AnimeSelection.Value
-        end
-    })
-	AnimeSelection = AnimeImages:CreateDropdown({
-		Name = 'Selection',
-		Function = function(val)
-			for i,v in coreGui:GetChildren() do
-                if v.Name == 'Anime' then
-                    v:Destroy()
-                end
-            end
-
-            animefunctions[val]()
-		end,
-		List = {'Waifu1', 'Waifu2'}
-	})
-end)
-
-run(function()
-    local ChatTag
-	local TagColor
-	local TagText
-    ChatTag = vape.Categories.Utility:CreateModule({
-        Name = 'ChatTag',
-        Function = function(callback)
-            if callback then
-                textChatService.OnIncomingMessage = function(message: string?)
-                    local prop = Instance.new('TextChatMessageProperties')
-                    if message.TextSource and message.TextSource.UserId == lplr.UserId then
-						local color = Color3.fromHSV(TagColor['Hue'], TagColor['Sat'], TagColor.Value)
-						local txt = TagText.Value or 'Plus V2'
-
-						prop.PrefixText = string.format("<font color='#%s'>[%s]</font> %s", color:ToHex(), txt, message.PrefixText or '')
-                    end
-                    return prop
-                end
-            else
-                textChatService.OnIncomingMessage = nil
-            end
-        end,
-        Tooltip = 'Adds a text next to your name every time you chat'
-    })
-	TagColor = ChatTag:CreateColorSlider({
-		Name = 'Tag Color',
-		DefaultOpacity = 0.5,
-		Function = function(hue, sat, val)
-			textChatService.OnIncomingMessage = function(message: string?)
-                local prop = Instance.new('TextChatMessageProperties')
-                if message.TextSource and message.TextSource.UserId == lplr.UserId then
-					local color = Color3.fromHSV(hue, sat, val)
-					local txt = TagText.Value or 'Plus VAPE'
-                    prop.PrefixText = string.format("<font color='#%s'>[%s]</font> %s", color:ToHex(), txt, message.PrefixText or '')
-                end
-                return prop
-            end
-		end,
-		Visible = true
-	})
-	TagText = ChatTag:CreateTextBox({
-		Name = 'TagText',
-		Default = 'Plus VAPE',
-		Function = function(val)
-			textChatService.OnIncomingMessage = function(message: string?)
-                local prop = Instance.new('TextChatMessageProperties')
-                if message.TextSource and message.TextSource.UserId == lplr.UserId then
-					local color = Color3.fromHSV(TagColor['Hue'], TagColor['Sat'], TagColor.Value)
-					local txt = TagText.Value or 'Plus VAPE'
-                    prop.PrefixText = string.format("<font color='#%s'>[%s]</font> %s", color:ToHex(), txt, message.PrefixText or '')
-                end
-                return prop
-            end
-		end,
-		Visible = true
-	})
-end)
-
-run(function()
-    local Lighting = game:GetService("Lighting")
-
-    -- Save original lighting values to restore later
-    local originalSettings = {
-        Brightness = Lighting.Brightness,
-        Ambient = Lighting.Ambient,
-        OutdoorAmbient = Lighting.OutdoorAmbient,
-        ClockTime = Lighting.ClockTime,
-        FogEnd = Lighting.FogEnd
-    }
-
-    vape.Categories.Utility:CreateModule({
-        Name = "Fullbright",
-        Tooltip = "Makes the game much brighter for better visibility.",
-        Function = function(enabled)
-            if enabled then
-                Lighting.Brightness = 5
-                Lighting.Ambient = Color3.new(1, 1, 1)
-                Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-                Lighting.ClockTime = 14 -- Daylight
-                Lighting.FogEnd = 100000 -- Remove fog
-            else
-                -- Restore original settings
-                Lighting.Brightness = originalSettings.Brightness
-                Lighting.Ambient = originalSettings.Ambient
-                Lighting.OutdoorAmbient = originalSettings.OutdoorAmbient
-                Lighting.ClockTime = originalSettings.ClockTime
-                Lighting.FogEnd = originalSettings.FogEnd
-            end
-        end
-    })
-end)
-
-run(function()
-	local MelodyExploit
-	MelodyExploit = vape.Categories.Utility:CreateModule({
-		Name = 'MelodyExploit',
-		Function = function(callback)
-			if callback then
-				repeat
-					if entitylib.isAlive and getItem('guitar') then
-						bedwars.Client:Get(remotes.GuitarHeal):SendToServer({
-							healTarget = lplr.Character
-						})
-					end
-					task.wait()
-				until not MelodyExploit.Enabled
-			end
-		end,
-		Tooltip = 'Acts like a god-mode with the Melody kit'
-	})
-end)
 
 if not isfile('meteor/profiles/nofirst.txt') then
 	writefile('meteor/profiles/nofirst.txt', 'true')
@@ -9935,27 +9200,6 @@ run(function()
     })
 end)
 
-run(function()
-	local ItemlessLongjump = {Enabled = false}
-
-	ItemlessLongjump = vape.Categories.Utility:CreateModule({
-		Name = "ItemlessLongjump",
-		Function = function(callback)
-			ItemlessLongjump.Enabled = callback
-			if callback then
-				lplr.Character.HumanoidRootPart.Velocity = lplr.Character.HumanoidRootPart.Velocity + Vector3.new(0, 100, 0)
-				task.wait(0.3)
-				for i = 1, 4 do
-					task.wait(0.4)
-					lplr.Character.HumanoidRootPart.Velocity = lplr.Character.HumanoidRootPart.Velocity + Vector3.new(0, 75, 0)
-				end
-			else
-				workspace.Gravity = 192.6
-			end
-		end,
-		Tooltip = "Lets you do a longjump without any items/kits"
-	})
-end)
 run(function()
     local AutoBuyWool
     local shopId
@@ -10007,136 +9251,973 @@ run(function()
         end
     })
 end)
-local YuziFly
+
 run(function()
-	local up, down = 0, 0
-	local JumpTick, JumpSpeed, Direction = tick(), 0
-	local delayFlyUntil = 0
-
-	YuziFly = vape.Categories.Blatant:CreateModule({
-		Name = "YuziFly",
-		Function = function(enabled)
-			frictionTable.YuziFly = enabled or nil
-			updateVelocity()
-			if enabled then
-				JumpTick = tick()
-				JumpSpeed = 0
-				Direction = nil
-				delayFlyUntil = 0
-				up, down = 0, 0
-
-				local daoList = {
-					["wood_dao"] = true,
-					["stone_dao"] = true,
-					["iron_dao"] = true,
-					["diamond_dao"] = true,
-					["emerald_dao"] = true
-				}
-
-				local item = store.hand and store.hand.tool
-				if item and daoList[item.Name] and bedwars.AbilityController:canUseAbility("dash") then
-					local root = entitylib.character.RootPart
-					local pos = root.Position
-					local dir = root.CFrame.LookVector
-
-					bedwars.SwordController.lastAttack = workspace:GetServerTimeNow()
-					switchItem(item, 0.1)
-
-					replicatedStorage["events-@easy-games/game-core:shared/game-core-networking@getEvents.Events"]
-						.useAbility:FireServer("dash", {
-							direction = dir,
-							origin = pos,
-							weapon = item.Name
-						})
-
-					JumpSpeed = 4.5
-					JumpTick = tick() + 2.4
-					Direction = Vector3.new(dir.X, 0, dir.Z).Unit
-					delayFlyUntil = tick() + 0.2
-				end
-
-				YuziFly:Clean(runService.PreSimulation:Connect(function()
-					if not entitylib.isAlive then return end
-					local root = entitylib.character.RootPart
-					if not isnetworkowner(root) then return end
-
-					local moveDir = entitylib.character.Humanoid.MoveDirection
-					local flyVec = moveDir * getSpeed()
-					local yVel = (up + down) * 45
-
-					if JumpTick > tick() and Direction then
-						flyVec += Direction * JumpSpeed
-					end
-
-					if tick() >= delayFlyUntil then
-						root.AssemblyLinearVelocity = flyVec + Vector3.new(0, yVel, 0)
-					end
-				end))
-
-				YuziFly:Clean(inputService.InputBegan:Connect(function(input)
-					if not inputService:GetFocusedTextBox() then
-						if input.KeyCode == Enum.KeyCode.Space then
-							up = 1
-						elseif input.KeyCode == Enum.KeyCode.LeftShift then
-							down = -1
-						end
-					end
-				end))
-
-				YuziFly:Clean(inputService.InputEnded:Connect(function(input)
-					if input.KeyCode == Enum.KeyCode.Space then
-						up = 0
-					elseif input.KeyCode == Enum.KeyCode.LeftShift then
-						down = 0
-					end
-				end))
-			else
-				JumpSpeed = 0
-				Direction = nil
-				delayFlyUntil = 0
-				up, down = 0, 0
-			end
-		end,
-		ExtraText = function()
-			return "Heatseeker"
-		end,
-		Tooltip = "Lets you fly longer with yuzi"
-	})
-end)
-local CheaterDetector
-run(function()
-	local flagged = {}
-
-	CheaterDetector = vape.Categories.Utility:CreateModule({
-		Name = "CheaterDetector",
-		Function = function(enabled)
-			if enabled then
-				for _, player in pairs(game.Players:GetPlayers()) do
-					if player ~= game.Players.LocalPlayer and not flagged[player] then
-						local accountAge = player.AccountAge or 0
-						if accountAge < 25 then
-							flagged[player] = true
-							notif("Cheaterdetector", player.Name .. " might be cheating (" .. accountAge .. " days)", 10, "warning")
-						end
-					end
-				end
-				game.Players.PlayerAdded:Connect(function(player)
-					if player ~= game.Players.LocalPlayer then
-						task.delay(5, function() 
-							if not flagged[player] then
-								local accountAge = player.AccountAge or 0
-								if accountAge < 25 then
-									flagged[player] = true
-									notif("Cheaterdetector", player.Name .. " might be cheating (" .. accountAge .. " days)", 10, "warning")
+	local DamageIndicator = {}
+	local DamageIndicatorColorToggle = {}
+	local DamageIndicatorColor = {Hue = 0, Sat = 0, Value = 0}
+	local DamageIndicatorTextToggle = {}
+	local DamageIndicatorText = {ListEnabled = {}}
+	local DamageIndicatorFontToggle = {}
+	local DamageIndicatorFont = {Value = 'GothamBlack'}
+	local DamageIndicatorTextObjects = {}
+    local DamageIndicatorMode1
+    local DamageMessages = {
+		'Pow!',
+		'Pop!',
+		'Hit!',
+		'Smack!',
+		'Bang!',
+		'Boom!',
+		'Whoop!',
+		'Damage!',
+		'-9e9!',
+		'Whack!',
+		'Crash!',
+		'Slam!',
+		'Zap!',
+		'Snap!',
+		'Thump!'
+	}
+	local RGBColors = {
+		Color3.fromRGB(255, 0, 0),
+		Color3.fromRGB(255, 127, 0),
+		Color3.fromRGB(255, 255, 0),
+		Color3.fromRGB(0, 255, 0),
+		Color3.fromRGB(0, 0, 255),
+		Color3.fromRGB(75, 0, 130),
+		Color3.fromRGB(148, 0, 211)
+	}
+	local orgI, mz, vz = 1, 5, 10
+    local DamageIndicatorMode = {Value = 'Rainbow'}
+	local DamageIndicatorMode2 = {Value = 'Gradient'}
+	DamageIndicator = vape.Categories.Render:CreateModule({
+        PerformanceModeBlacklisted = true,
+		Name = 'DamageIndicator',
+		Function = function(calling)
+			if calling then
+				task.spawn(function()
+					table.insert(DamageIndicator.Connections, workspace.DescendantAdded:Connect(function(v)
+						pcall(function()
+                            if v.Name ~= 'DamageIndicatorPart' then return end
+							local indicatorobj = v:FindFirstChildWhichIsA('BillboardGui'):FindFirstChildWhichIsA('Frame'):FindFirstChildWhichIsA('TextLabel')
+							if indicatorobj then
+                                if DamageIndicatorColorToggle.Enabled then
+                                    -- indicatorobj.TextColor3 = Color3.fromHSV(DamageIndicatorColor.Hue, DamageIndicatorColor.Sat, DamageIndicatorColor.Value)
+                                    if DamageIndicatorMode.Value == 'Rainbow' then
+                                        if DamageIndicatorMode2.Value == 'Gradient' then
+                                            indicatorobj.TextColor3 = Color3.fromHSV(tick() % mz / mz, orgI, orgI)
+                                        else
+                                            runService.Stepped:Connect(function()
+                                                orgI = (orgI % #RGBColors) + 1
+                                                indicatorobj.TextColor3 = RGBColors[orgI]
+                                            end)
+                                        end
+                                    elseif DamageIndicatorMode.Value == 'Custom' then
+                                        indicatorobj.TextColor3 = Color3.fromHSV(
+                                            DamageIndicatorColor.Hue, 
+                                            DamageIndicatorColor.Sat, 
+                                            DamageIndicatorColor.Value
+                                        )
+                                    else
+                                        indicatorobj.TextColor3 = Color3.fromRGB(127, 0, 255)
+                                    end
+                                end
+                                if DamageIndicatorTextToggle.Enabled then
+                                    if DamageIndicatorMode1.Value == 'Custom' then
+                                        print(getrandomvalue(DamageIndicatorText.ListEnabled))
+                                        local o = getrandomvalue(DamageIndicatorText.ListEnabled)
+                                        indicatorobj.Text = o ~= '' and o or indicatorobj.Text
+									elseif DamageIndicatorMode1.Value == 'Multiple' then
+										indicatorobj.Text = DamageMessages[math.random(orgI, #DamageMessages)]
+									else
+										indicatorobj.Text = 'Render Intents on top!'
+									end
 								end
+								indicatorobj.Font = DamageIndicatorFontToggle.Enabled and Enum.Font[DamageIndicatorFont.Value] or indicatorobject.Font
 							end
 						end)
-					end
+					end))
 				end)
+			end
+		end
+	})
+    DamageIndicatorMode = DamageIndicator:CreateDropdown({
+		Name = 'Color Mode',
+		List = {
+			'Rainbow',
+			'Custom',
+			'Lunar'
+		},
+		HoverText = 'Mode to color the Damage Indicator',
+		Value = 'Rainbow',
+		Function = function() end
+	})
+	DamageIndicatorMode2 = DamageIndicator:CreateDropdown({
+		Name = 'Rainbow Mode',
+		List = {
+			'Gradient',
+			'Paint'
+		},
+		HoverText = 'Mode to color the Damage Indicator\nwith Rainbow Color Mode',
+		Value = 'Gradient',
+		Function = function() end
+	})
+    DamageIndicatorMode1 = DamageIndicator:CreateDropdown({
+		Name = 'Text Mode',
+		List = {
+            'Custom',
+			'Multiple',
+			'Lunar'
+		},
+		HoverText = 'Mode to change the Damage Indicator Text',
+		Value = 'Custom',
+		Function = function() end
+	})
+	DamageIndicatorColorToggle = DamageIndicator:CreateToggle({
+		Name = 'Custom Color',
+		Function = function(calling) pcall(function() DamageIndicatorColor.Object.Visible = calling end) end
+	})
+	DamageIndicatorColor = DamageIndicator:CreateColorSlider({
+		Name = 'Text Color',
+		Function = function() end
+	})
+	DamageIndicatorTextToggle = DamageIndicator:CreateToggle({
+		Name = 'Custom Text',
+		HoverText = 'random messages for the indicator',
+		Function = function(calling) pcall(function() DamageIndicatorText.Object.Visible = calling end) end
+	})
+	DamageIndicatorText = DamageIndicator:CreateTextList({
+		Name = 'Text',
+		TempText = 'Indicator Text',
+		AddFunction = function() end
+	})
+	DamageIndicatorColor.Object.Visible = DamageIndicatorColorToggle.Enabled
+	DamageIndicatorText.Object.Visible = DamageIndicatorTextToggle.Enabled
+end)
+run(function()
+    Furryall = vape.Categories.Blatant:CreateModule({
+        Name = 'Furryall',
+        Function = function(callback)
+            local Players = game:GetService("Players")
+            local Workspace = game:GetService("Workspace")
+            local LOCAL_PLAYER = Players.LocalPlayer
+
+            local HEAD_ACCESSORY_ID = "rbxassetid://5460001849"
+            local HRP_ACCESSORY_ID = "rbxassetid://7485988593"
+
+            local insertedAccessories = {}
+
+            local function loadAccessory(assetId)
+                local asset = game:GetObjects(assetId)[1]
+                if not asset then return nil end
+                if asset:IsA("Accessory") then return asset end
+                for _, child in ipairs(asset:GetChildren()) do
+                    if child:IsA("Accessory") then return child end
+                end
+                return nil
+            end
+
+            local function weldAccessory(character, partName, assetId, offsetCFrame)
+                local part = character:FindFirstChild(partName)
+                if not part or not part:IsA("BasePart") then return end
+                local acc = loadAccessory(assetId)
+                if not acc then return end
+                acc = acc:Clone()
+                local handle = acc:FindFirstChild("Handle")
+                if not handle or not handle:IsA("BasePart") then return end
+
+                for _, p in acc:GetDescendants() do
+                    if p:IsA("BasePart") then
+                        p.Anchored = false
+                        p.CanCollide = false
+                        p.Transparency = 0
+                    end
+                end
+
+                acc.Parent = Workspace
+                handle.CFrame = part.CFrame * offsetCFrame
+
+                local weld = Instance.new("WeldConstraint")
+                weld.Part0 = part
+                weld.Part1 = handle
+                weld.Parent = handle
+
+                table.insert(insertedAccessories, acc)
+            end
+
+            local function applyAccessories(character)
+                if not character or not character.Parent then return end
+                weldAccessory(character, "Head", HEAD_ACCESSORY_ID, CFrame.new(0, 0.8, 0))
+                weldAccessory(character, "HumanoidRootPart", HRP_ACCESSORY_ID, CFrame.Angles(0, math.rad(180), 0) * CFrame.new(0, 0, -1) * CFrame.Angles(0, math.rad(180), 0))
+            end
+
+            local function isPlayerCharacter(model)
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player.Character == model then return true end
+                end
+                return false
+            end
+
+            local function processCharacters()
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LOCAL_PLAYER and player.Character then
+                        applyAccessories(player.Character)
+                    end
+                end
+                for _, model in ipairs(Workspace:GetChildren()) do
+                    if model:IsA("Model") and not isPlayerCharacter(model) and model:FindFirstChildWhichIsA("BasePart") then
+                        applyAccessories(model)
+                    end
+                end
+            end
+
+            local function onCharacterAdded(char)
+                char:WaitForChild("Head", 5)
+                char:WaitForChild("HumanoidRootPart", 5)
+                applyAccessories(char)
+            end
+
+            local function setupPlayer(player)
+                if player == LOCAL_PLAYER then return end
+                if player.Character then onCharacterAdded(player.Character) end
+                player.CharacterAdded:Connect(onCharacterAdded)
+            end
+
+            local function onWorkspaceAdded(child)
+                if child:IsA("Model") and not isPlayerCharacter(child) and child:FindFirstChild("HumanoidRootPart") then
+                    task.delay(0.1, function()
+                        applyAccessories(child)
+                    end)
+                end
+            end
+
+            if callback then
+                processCharacters()
+                for _, player in ipairs(Players:GetPlayers()) do setupPlayer(player) end
+                Players.PlayerAdded:Connect(setupPlayer)
+                Workspace.ChildAdded:Connect(onWorkspaceAdded)
+            else
+                for _, acc in ipairs(insertedAccessories) do
+                    if acc and acc.Parent then acc:Destroy() end
+                end
+                insertedAccessories = {}
+            end
+        end,
+        Default = false,
+        Tooltip = "Makes everyone a furry except for you"
+    })
+end)
+run(function()
+    FirstPersonArm = vape.Categories.Utility:CreateModule({
+        Name = 'FirstPersonArm',
+        Function = function(callback)
+            local viewmodel = workspace:FindFirstChild("Camera") and workspace.Camera:FindFirstChild("Viewmodel")
+            if viewmodel then
+                local lowerArm = viewmodel:FindFirstChild("RightLowerArm")
+                local hand = viewmodel:FindFirstChild("RightHand")
+
+                if lowerArm and lowerArm:IsA("MeshPart") then
+                    lowerArm.Transparency = callback and 0 or 1
+                end
+
+                if hand and hand:IsA("MeshPart") then
+                    hand.Transparency = callback and 0 or 1
+                end
+            end
+        end,
+        Default = false,
+        Tooltip = "Self Explanatory"
+    })
+end)
+																																					
+local AutoPlayAllow = nil
+local AutoWin = {Enabled = false}
+run(function()
+	local antihit
+	local antihitrange 
+	local antihitairtime 
+	local antihitsettings 
+	local antihitgroundtime 
+	local antihitautoair
+
+	local oldroot
+	local hip
+	local clone
+
+	local function createClone()
+		if entitylib.isAlive and entitylib.character.Humanoid.Health > 0 and (not oldroot or not oldroot.Parent) then
+			hip = entitylib.character.Humanoid.HipHeight
+			oldroot = entitylib.character.HumanoidRootPart
+			if not lplr.Character.Parent then return false end
+			lplr.Character.Parent = game
+			clone = oldroot:Clone()
+			clone.Parent = lplr.Character
+			oldroot.Parent = gameCamera
+			bedwars.QueryUtil:setQueryIgnored(oldroot, true)
+			lplr.Character.PrimaryPart = clone
+			lplr.Character.Parent = workspace
+			for _, v in lplr.Character:GetDescendants() do
+				if v:IsA('Weld') or v:IsA('Motor6D') then
+					if v.Part0 == oldroot then v.Part0 = clone end
+					if v.Part1 == oldroot then v.Part1 = clone end
+				end
+			end
+			return true
+		end
+		return false
+	end
+	
+	local function destroyClone()
+		if not oldroot or not oldroot.Parent or not entitylib.isAlive then return false end
+		lplr.Character.Parent = game
+		oldroot.Parent = lplr.Character
+		lplr.Character.PrimaryPart = oldroot
+		lplr.Character.Parent = workspace
+		oldroot.CanCollide = true
+		for _, v in lplr.Character:GetDescendants() do
+			if v:IsA('Weld') or v:IsA('Motor6D') then
+				if v.Part0 == clone then v.Part0 = oldroot end
+				if v.Part1 == clone then v.Part1 = oldroot end
+			end
+		end
+		local oldcf = clone.CFrame
+		if clone then
+			clone:Destroy()
+			clone = nil
+		end
+		oldroot.Transparency = 1
+		oldroot = nil
+		entitylib.character.RootPart.CFrame = oldcf + Vector3.new(0, 12, 0)
+		task.spawn(function()
+			for i = 1, 12 do
+				entitylib.character.RootPart.Velocity = Vector3.zero
+				task.wait()
+			end
+		end)
+		entitylib.character.Humanoid.HipHeight = hip or 2
+	end
+
+	local rayCheck = RaycastParams.new()
+
+	local getY = function()
+		if oldroot and oldroot.Parent then
+			return 40
+		end
+		return 40
+	end
+
+	local tpbackup = false
+
+	local lastantihitting = nil
+
+	local projectileHitting = false
+
+	local FlyLandTick = 0
+
+	antihit = vape.Categories.Blatant:CreateModule({
+		Name = 'Anti Hit',
+		Function = function(call)
+			if call then
+				antihit:Clean(runService.PreSimulation:Connect(function()
+					if entitylib.isAlive and tick() > (FlyLandTick or 0) then
+						local cf = clone and clone.Parent and {clone.CFrame:GetComponents()} or {entitylib.character.HumanoidRootPart.CFrame:GetComponents()}
+						if store.KillauraTarget and not antihitting then
+							cf[2] = store.KillauraTarget.Character.PrimaryPart.CFrame.Y
+						end
+						if oldroot and oldroot.Parent then
+							oldroot.CFrame = antihitting and (tick() - entitylib.character.AirTime) < 2 and CFrame.new(clone.CFrame.X, oldroot.CFrame.Y, clone.CFrame.Z) or CFrame.new(unpack(cf)) + Vector3.new(0, 6, 0)
+							if not antihitting and lastantihitting then
+								lastantihitting = antihitting
+								for i = 1, 4 do
+									oldroot.Velocity = Vector3.zero
+									task.wait()
+								end
+							else
+								lastantihitting = antihitting
+							end
+						end
+					end
+				end))
+				repeat
+				  	if store.matchState == 0 or not entitylib.isAlive or tick() < (FlyLandTick or 0) then task.wait() continue end
+					if AutoWin.Enabled and not AutoPlayAllow then return end
+					rayCheck.FilterDescendantsInstances = {lplr.Character, AntiFallPart}
+					local plr = entitylib.AllPosition({
+						Range = antihitrange.Value,
+						Part = 'RootPart',
+						Players = antihitsettings.Players.Enabled,
+						NPCs = antihitsettings.NPCs.Enabled,
+						Limit = 1
+					})[1]
+					if entitylib.character.AirTime and plr and (tick() - entitylib.character.AirTime) < 2 or projectileHitting then
+						createClone()
+						if tpbackup then
+							tpbackup = false
+						else
+							tpbackup = true
+						end
+						antihitting = not tpbackup
+						projectileHitting = false
+						if not tpbackup then
+							oldroot.CFrame += Vector3.new(0, getY(), 0)
+						end
+					else
+						antihitting = false
+						destroyClone()
+					end
+					local delayv = antihitautoair.Enabled and (tpbackup and store.attackSpeed and 0.14) or (tpbackup and antihitairtime.Value or antihitgroundtime.Value) 
+					task.wait(delayv)
+				until not antihit.Enabled
 			else
-				flagged = {}
+				destroyClone()
+				tpbackup = false
+			end
+		end
+	})
+	antihitsettings = antihit:CreateTargets({
+		Players = true, 
+		NPCs = false
+	})
+	antihitautoair = antihit:CreateToggle({
+		Name = 'Auto Predict',
+		Default = true,
+		Function = function(call)
+			if antihitairtime then
+				antihitairtime.Object.Visible = not call
+				antihitgroundtime.Object.Visible = not call
+			end
+		end
+	})
+	antihitrange = antihit:CreateSlider({
+		Name = 'Range',
+		Min = 1,
+		Max = 40,
+		Default = 25
+	})
+	antihitgroundtime = antihit:CreateSlider({
+		Name = 'Ground Time',
+		Decimal = 15,
+		Min = 0,
+		Max = 2,
+		Default = 0.14
+	})
+	antihitairtime = antihit:CreateSlider({
+		Name = 'Air Time',
+		Decimal = 15,
+		Min = 0,
+		Max = 2,
+		Default = 0.2
+	})
+	antihitgroundtime.Object.Visible = false
+	antihitairtime.Object.Visible = false
+end)
+run(function()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    Headless = vape.Categories.Utility:CreateModule({
+        Name = "Headless",
+        Function = function(enabled)
+            if enabled then
+                local function applyHeadlessToCharacter(character)
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    if humanoid and humanoid.RigType == Enum.HumanoidRigType.R15 then
+                        local head = character:FindFirstChild("Head")
+                        if head then
+                            head.Transparency = 1
+                            local face = head:FindFirstChildWhichIsA("Decal")
+                            if face then
+                                face.Transparency = 1
+                            end
+                        end
+                    end
+                end
+
+                local currentChar = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                applyHeadlessToCharacter(currentChar)
+
+                Headless:Clean(LocalPlayer.CharacterAdded:Connect(function(char)
+                    if Headless.Enabled then
+                        task.wait(0.5)
+                        applyHeadlessToCharacter(char)
+                    end
+                end))
+            else
+                local char = LocalPlayer.Character
+                if char then
+                    local head = char:FindFirstChild("Head")
+                    if head then
+                        head.Transparency = 0
+                        local face = head:FindFirstChildWhichIsA("Decal")
+                        if face then
+                            face.Transparency = 0
+                        end
+                    end
+                end
+            end
+        end,
+        Default = false,
+        Tooltip = "Useless as hell bruh💔"
+    })
+end)
+run(function()
+    local disguiseConnection
+    local uiConnections = {}
+    local characterConnection
+    local originalTexts = {}
+    local originalAppearanceId, originalDisplayName
+
+    StreamerMode = vape.Categories.Utility:CreateModule({
+        Name = 'StreamerMode',
+        Function = function(callback)
+            local lp = game:GetService("Players").LocalPlayer
+            local players = game:GetService('Players')
+
+            if callback then
+                if not getgenv().Config then
+                    getgenv().Config = {
+                        Headless = false,
+                        FakeDisplayName = "meteor",
+                        FakeName = "meteor",
+                        FakeId = 18,
+                    }
+                end
+
+                local Config = getgenv().Config
+                local oldUserId = tostring(lp.UserId)
+                local oldName = lp.Name
+                originalDisplayName = lp.DisplayName
+                originalAppearanceId = lp.CharacterAppearanceId
+
+                local function processtext(text)
+                    if typeof(text) ~= "string" then return text end
+                    text = text:gsub(oldName, Config.FakeName)
+                    text = text:gsub(oldUserId, tostring(Config.FakeId))
+                    text = text:gsub(originalDisplayName, Config.FakeDisplayName)
+                    return text
+                end
+
+                -- Disguise UI
+                for _, v in ipairs(game:GetDescendants()) do
+                    if v:IsA("TextBox") or v:IsA("TextLabel") or v:IsA("TextButton") then
+                        originalTexts[v] = {Text = v.Text, Name = v.Name}
+                        v.Text = processtext(v.Text)
+                        v.Name = processtext(v.Name)
+                        table.insert(uiConnections, v.Changed:Connect(function()
+                            v.Text = processtext(v.Text)
+                            v.Name = processtext(v.Name)
+                        end))
+                    end
+                end
+
+                disguiseConnection = game.DescendantAdded:Connect(function(descendant)
+                    if descendant:IsA("TextBox") or descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                        descendant.Text = processtext(descendant.Text)
+                        descendant.Name = processtext(descendant.Name)
+                        table.insert(uiConnections, descendant.Changed:Connect(function()
+                            descendant.Text = processtext(descendant.Text)
+                            descendant.Name = processtext(descendant.Name)
+                        end))
+                    end
+                end)
+
+                -- Apply fake info
+                lp.DisplayName = Config.FakeDisplayName
+                lp.CharacterAppearanceId = Config.FakeId
+
+                -- Headless effect
+                if Config.Headless then
+                    task.spawn(function()
+                        while StreamerMode.Enabled and task.wait(0.5) do
+                            local char = lp.Character
+                            if char and char:FindFirstChild("Head") then
+                                char.Head.Transparency = 1
+                                local decal = char.Head:FindFirstChildOfClass("Decal")
+                                if decal then decal:Destroy() end
+                            end
+                        end
+                    end)
+                end
+
+                -- Disguise character
+                local function disguisechar(char, id)
+                    task.spawn(function()
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if not hum then return end
+
+                        local desc
+                        repeat
+                            pcall(function()
+                                desc = players:GetHumanoidDescriptionFromUserId(id)
+                            end)
+                            task.wait()
+                        until desc
+
+                        desc.HeightScale = hum:WaitForChild("HumanoidDescription").HeightScale
+                        char.Humanoid:ApplyDescriptionClientServer(desc)
+                    end)
+                end
+
+                disguisechar(lp.Character, Config.FakeId)
+                characterConnection = lp.CharacterAdded:Connect(function(char)
+                    disguisechar(char, Config.FakeId)
+                end)
+            else
+                -- Cleanup: revert everything
+                if characterConnection then characterConnection:Disconnect() end
+                if disguiseConnection then disguiseConnection:Disconnect() end
+                for _, conn in pairs(uiConnections) do
+                    conn:Disconnect()
+                end
+
+                -- Restore original UI text
+                for obj, data in pairs(originalTexts) do
+                    if obj and obj.Parent then
+                        obj.Text = data.Text
+                        obj.Name = data.Name
+                    end
+                end
+
+                -- Restore original player info
+                if lp then
+                    lp.DisplayName = originalDisplayName or lp.Name
+                    lp.CharacterAppearanceId = originalAppearanceId or lp.UserId
+                end
+            end
+        end,
+        Default = false,
+        Tooltip = "Client Sided"
+    })
+end)
+run(function()
+	local SkyScytheKill = {Enabled = false}
+	SkyScytheKill = vape.Categories.Utility:CreateModule({
+		["Name"] = "SkyScytheExploit",
+		["Function"] = function(callback)
+			if callback then
+				repeat
+					wait()
+					if getItem("sky_scythe") then
+						bedwars.Client:Get('SkyScytheSpin'):SendToServer()
+					end
+				until not SkyScytheKill["Enabled"]
 			end
 		end,
-		Tooltip = "Detects players that might be cheating"
+		["Description"] = "SkyScytheExploit"
 	})
+end)
+run(function()
+    local playersService = game:GetService("Players")
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local tweenService = game:GetService("TweenService")
+    local workspace = game:GetService("Workspace")
+
+    local activeTweens = {}
+    local activeAnimationTrack = nil
+    local activeModel = nil
+    local emoteActive = false
+
+    NightmareEmote = vape.Categories.Utility:CreateModule({
+        Name = 'Nightmare Emote',
+        Function = function(callback)
+            if callback then
+                local function spinParts(model)
+                    for _, part in ipairs(model:GetDescendants()) do
+                        if part:IsA("BasePart") and (part.Name == "Middle" or part.Name == "Outer") then
+                            local tweenInfo, goal
+                            if part.Name == "Middle" then
+                                tweenInfo = TweenInfo.new(12.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false, 0)
+                                goal = { Orientation = part.Orientation + Vector3.new(0, -360, 0) }
+                            elseif part.Name == "Outer" then
+                                tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false, 0)
+                                goal = { Orientation = part.Orientation + Vector3.new(0, 360, 0) }
+                            end
+
+                            local tween = tweenService:Create(part, tweenInfo, goal)
+                            tween:Play()
+                            table.insert(activeTweens, tween)
+                        end
+                    end
+                end
+
+                local function placeModelUnderLeg()
+                    local player = playersService.LocalPlayer
+                    local character = player.Character or player.CharacterAdded:Wait()
+                    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+                    if humanoidRootPart then
+                        local assetsFolder = replicatedStorage:FindFirstChild("Assets")
+                        if assetsFolder then
+                            local effectsFolder = assetsFolder:FindFirstChild("Effects")
+                            if effectsFolder then
+                                local modelTemplate = effectsFolder:FindFirstChild("NightmareEmote")
+                                if modelTemplate and modelTemplate:IsA("Model") then
+                                    local clonedModel = modelTemplate:Clone()
+                                    clonedModel.Parent = workspace
+
+                                    if clonedModel.PrimaryPart then
+                                        clonedModel:SetPrimaryPartCFrame(humanoidRootPart.CFrame - Vector3.new(0, 3, 0))
+                                    else
+                                        warn("PrimaryPart not set for NightmareEmote model!")
+                                        return
+                                    end
+
+                                    spinParts(clonedModel)
+                                    activeModel = clonedModel
+                                else
+                                    warn("NightmareEmote model not found or is not a valid model!")
+                                end
+                            else
+                                warn("Effects folder not found in Assets!")
+                            end
+                        else
+                            warn("Assets folder not found in ReplicatedStorage!")
+                        end
+                    else
+                        warn("HumanoidRootPart not found in character!")
+                    end
+                end
+
+                local function playAnimation(animationId)
+                    local player = playersService.LocalPlayer
+                    local character = player.Character or player.CharacterAdded:Wait()
+                    local humanoid = character:FindFirstChild("Humanoid")
+
+                    if humanoid then
+                        local animator = humanoid:FindFirstChild("Animator") or Instance.new("Animator", humanoid)
+                        local animation = Instance.new("Animation")
+                        animation.AnimationId = animationId
+                        activeAnimationTrack = animator:LoadAnimation(animation)
+                        activeAnimationTrack:Play()
+                    else
+                        warn("Humanoid not found in character!")
+                    end
+                end
+
+                local function stopEffects()
+                    for _, tween in ipairs(activeTweens) do
+                        tween:Cancel()
+                    end
+                    activeTweens = {}
+
+                    if activeAnimationTrack then
+                        activeAnimationTrack:Stop()
+                        activeAnimationTrack = nil
+                    end
+
+                    if activeModel then
+                        activeModel:Destroy()
+                        activeModel = nil
+                    end
+
+                    emoteActive = false
+                end
+
+                local function monitorWalking()
+                    local player = playersService.LocalPlayer
+                    local character = player.Character or player.CharacterAdded:Wait()
+                    local humanoid = character:FindFirstChild("Humanoid")
+
+                    if humanoid then
+                        humanoid.Running:Connect(function(speed)
+                            if speed > 0 and emoteActive then
+                                stopEffects()
+                            end
+                        end)
+                    else
+                        warn("Humanoid not found in character!")
+                    end
+                end
+
+                local function activateNightmareEmote()
+                    if emoteActive then return end
+                    emoteActive = true
+
+                    local success, err = pcall(function()
+                        monitorWalking()
+                        placeModelUnderLeg()
+                        playAnimation("rbxassetid://9191822700")
+                    end)
+
+                    if not success then
+                        warn("Error occurred: " .. tostring(err))
+                        emoteActive = false
+                    end
+                end
+
+                activateNightmareEmote()
+            else
+                -- When toggled off
+                if emoteActive then
+                    stopEffects()
+                end
+            end
+        end,
+        Tooltip = "Free Nightmare emote!1!1!1!1"
+    })
+end)
+																									
+run(function()
+    local runService = game:GetService("RunService")
+    local players = game:GetService("Players")
+    local lplr = players.LocalPlayer
+
+    local NoNameTag = vape.Categories.Utility:CreateModule({
+        Name = 'NoNameTag',
+        Function = function(callback)
+            if callback then
+                NoNameTag:Clean(runService.RenderStepped:Connect(function()
+                    pcall(function()
+                        if lplr.Character and lplr.Character:FindFirstChild("Head") and lplr.Character.Head:FindFirstChild("Nametag") then
+                            lplr.Character.Head.Nametag:Destroy()
+                        end
+                    end)
+                end))
+            end
+        end,
+        Tooltip = "Client Sided",
+        Default = false
+    })
+end)
+
+run(function()
+    GetHost = vape.Categories.Utility:CreateModule({
+        Name = 'GetHost',
+        Function = function(enabled)
+            local player = game.Players.LocalPlayer
+            if enabled then
+                player:SetAttribute("CustomMatchRole", "host")
+            else
+                player:SetAttribute("CustomMatchRole", nil) -- remove the role
+            end
+        end,
+        Default = false,
+        Tooltip = ":troll:"
+    })
+end)
+run(function()
+    local pack1
+	local packassetids = {
+		['Exhibition'] = 'rbxassetid://14060102755',
+		['Snoopy'] = 'rbxassetid://13782395340',
+		['Floshpa 16x'] = 'rbxassetid://14312698987',
+		['64x hentai'] = 'rbxassetid://14390823554',
+		['ducky 32x'] = 'rbxassetid://14415658661',
+		['GOOGLE CHROME'] = 'rbxassetid://14258942293',
+		['Chad'] = 'rbxassetid://14274833803',
+		['Looks like a fucking dick'] = 'rbxassetid://14614456664',
+		['SystemVoid 16x'] = 'rbxassetid://14217402799',
+		['Snoopy 16x Pack 2'] = 'rbxassetid://93716357946641',
+		['High res'] = 'rbxassetid://13780890894',
+		['Sentry 32x'] = 'rbxassetid://14254581941',
+		['Mastadawn'] = 'rbxassetid://14190963148',
+		['Old Meteor'] = 'rbxassetid://13802020264',
+		['Novoline'] = 'rbxassetid://13802560031',
+		['Minecraft Swords'] = 'rbxassetid://14427750969',
+		['MeteorX'] = 'rbxassetid://14028489054',
+		['Meteor older'] = 'rbxassetid://13993784995',
+	}
+    local TexturePacks 
+	TexturePacks = vape.Categories.Render:CreateModule({
+        Name = 'TexturePacks',
+        Tooltip = 'Gives you a cool unique textures for tools.',
+        Function = function(call)
+            if call then
+				local import = game:GetObjects(packassetids[pack1.Value])[1]
+				import.Parent = replicatedStorage
+				local index = {
+					{
+						name = "wood_sword",
+						offset = CFrame.Angles(math.rad(0),math.rad(-89),math.rad(-90)),
+						model = import:WaitForChild("Wood_Sword"),
+					},
+					{
+						name = "stone_sword",
+						offset = CFrame.Angles(math.rad(0),math.rad(-89),math.rad(-90)),
+						model = import:WaitForChild("Stone_Sword"),
+					},
+					{
+						name = "iron_sword",
+						offset = CFrame.Angles(math.rad(0),math.rad(-89),math.rad(-90)),
+						model = import:WaitForChild("Iron_Sword"),
+					},
+					{
+						name = "diamond_sword",
+						offset = CFrame.Angles(math.rad(0),math.rad(-89),math.rad(-90)),
+						model = import:WaitForChild("Diamond_Sword"),
+					},
+					{
+						name = "emerald_sword",
+						offset = CFrame.Angles(math.rad(0),math.rad(-89),math.rad(-90)),
+						model = import:WaitForChild("Emerald_Sword"),
+					},
+				}
+				for i,v in {'Wood', 'Diamond', 'Emerald', 'Stone', 'Iron', 'Gold'} do
+					if import:FindFirstChild(`{v}_Pickaxe`) then
+						table.insert(index, {
+							name = `{v:lower()}_pickaxe`,
+							offset = CFrame.Angles(math.rad(0), math.rad(-180), math.rad(-95)),
+							model = import[`{v}_Pickaxe`],
+						})
+					end
+					if import:FindFirstChild(v) then
+						table.insert(index, {
+							name = `{v:lower()}`,
+							offset = CFrame.Angles(math.rad(0),math.rad(-90),math.rad(table.find({'Emerald', 'Diamond'}, v) and 90 or -90)),
+							model = import[`{v}`],
+						})
+					end
+				end
+				TexturePacks:Clean(workspace.Camera.Viewmodel.ChildAdded:Connect(function(tool)
+					if(not tool:IsA("Accessory")) then return end
+					for i,v in pairs(index) do
+						if(v.name == tool.Name) then
+							for i,v in pairs(tool:GetDescendants()) do
+								if(v:IsA("Part") or v:IsA("MeshPart") or v:IsA("UnionOperation")) then
+									v.Transparency = 1
+								end
+							end
+							local model = v.model:Clone()
+							model.CFrame = tool:WaitForChild("Handle").CFrame * v.offset
+							model.CFrame *= CFrame.Angles(math.rad(0),math.rad(-50),math.rad(0))
+							model.Parent = tool
+							local weld = Instance.new("WeldConstraint",model)
+							weld.Part0 = model
+							weld.Part1 = tool:WaitForChild("Handle")
+							local tool2 = lplr.Character:WaitForChild(tool.Name)
+							for i,v in pairs(tool2:GetDescendants()) do
+								if(v:IsA("Part") or v:IsA("MeshPart") or v:IsA("UnionOperation")) then
+									v.Transparency = 1
+								end            
+							end            
+							local model2 = v.model:Clone()
+							model2.Anchored = false
+							model2.CFrame = tool2:WaitForChild("Handle").CFrame * v.offset
+							model2.CFrame *= CFrame.Angles(math.rad(0),math.rad(-50),math.rad(0))
+							model2.CFrame *= CFrame.new(0.6,0,-.9)
+							model2.Parent = tool2
+							local weld2 = Instance.new("WeldConstraint",model)
+							weld2.Part0 = model2
+							weld2.Part1 = tool2:WaitForChild("Handle")
+						end
+					end
+				end))
+            end
+        end
+    })
+	local list = {}
+	for i,v in packassetids do
+		table.insert(list, i)
+	end
+    pack1 = TexturePacks:CreateDropdown({
+        Name = 'Pack',
+        List = list,
+		Function = function()
+			if TexturePacks.Enabled then
+				TexturePacks:Toggle()
+				TexturePacks:Toggle()
+			end
+		end
+    })
 end)
