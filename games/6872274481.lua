@@ -1,5 +1,6 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
 	func()
 end
@@ -7248,7 +7249,7 @@ run(function()
 	end
 	
 	Breaker = vape.Categories.Minigames:CreateModule({
-		Name = 'Breaker',
+		Name = 'BedNuker',
 		Function = function(callback)
 			if callback then
 				for _ = 1, 30 do
@@ -8561,80 +8562,6 @@ run(function()
 	})
 end)
 
-run(function()
-	local AntiHit
-	local Range, IdleTime, HideTime
-
-	AntiHit = vape.Categories.Utility:CreateModule({
-		Name = 'AntiHit',
-		Tooltip = '[USELESS] Beat skids easily, or just prevent dying', -- hit reg changed so much it probably uses previous positions so this shit is useless
-		Function = function(enabled)
-			if enabled then
-				repeat
-					local plrs = entitylib.AllPosition({
-						Range = Range.Value,
-						Wallcheck = false,
-						Part = 'RootPart',
-						Players = true
-					})
-
-					for _, player in plrs do
-						local hrp = lplr.Character and lplr.Character.HumanoidRootPart
-						local stop = false
-						local startY = hrp.Position.Y
-
-						local fakepart = Instance.new('Part')
-						fakepart.Transparency = .9999
-						fakepart.Anchored = true
-						fakepart.CFrame = CFrame.new(hrp.Position)
-
-						workspace.CurrentCamera.CameraSubject = fakepart
-						hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 150, hrp.Position.Z)
-
-						spawn(function()
-							repeat
-								task.wait()
-								fakepart.CFrame = CFrame.new(hrp.Position.X, startY, hrp.Position.Z)
-							until stop or not hrp.Parent
-						end)
-
-						task.wait(HideTime.Value)
-
-						stop = true
-						fakepart:Destroy()
-						workspace.CurrentCamera.CameraSubject = hrp.Parent.Humanoid
-						hrp.CFrame = fakepart.CFrame * CFrame.new(0, 3.5, 0)
-
-						task.wait(IdleTime.Value)
-						break
-					end
-					task.wait()
-				until not AntiHit.Enabled
-			end
-		end
-	})
-
-	Range = AntiHit:CreateSlider({
-		Name = 'Range',
-		Min = 1,
-		Max = 50,
-		Default = 25
-	})
-
-	IdleTime = AntiHit:CreateSlider({
-		Name = 'Idle Time',
-		Min = 1,
-		Max = 5,
-		Default = .3
-	})
-
-	HideTime = AntiHit:CreateSlider({
-		Name = 'Hide Time',
-		Min = 1,
-		Max = 5,
-		Default = .6
-	})
-end)
 
 run(function() -- vape.gg
  	local Explosions
@@ -8684,6 +8611,165 @@ run(function() -- vape.gg
         end
     })
 end)
+local BetterFly
+run(function()
+    local Speed
+    local Vertical
+    local Accel
+    local Hover
+    local WallCheck
+    local TPDown
+
+    local rayParams = RaycastParams.new()
+    rayParams.RespectCanCollide = true
+
+    local up, down = 0, 0
+    local velocity = Vector3.zero
+
+    local tpActive = false
+    local tpRestoreY
+    local tpUntil = 0
+
+    BetterFly = vape.Categories.Blatant:CreateModule({
+        Name = 'BetterFly',
+        Function = function(callback)
+            frictionTable.BetterFly = callback or nil
+            updateVelocity()
+
+            if callback then
+                velocity = Vector3.zero
+                tpActive = false
+
+                BetterFly:Clean(runService.PreSimulation:Connect(function(dt)
+                    if not entitylib.isAlive then return end
+                    if not isnetworkowner(entitylib.character.RootPart) then return end
+
+                    local root = entitylib.character.RootPart
+                    local humanoid = entitylib.character.Humanoid
+                    local moveDir = humanoid.MoveDirection
+
+                    local targetVel =
+                        (moveDir * Speed.Value) +
+                        Vector3.new(0, (up + down) * Vertical.Value, 0)
+
+                    if Hover.Enabled and moveDir.Magnitude == 0 and up == 0 and down == 0 then
+                        targetVel = Vector3.zero
+                    end
+
+                    velocity = velocity:Lerp(targetVel, math.clamp(Accel.Value * dt, 0, 1))
+
+                    rayParams.FilterDescendantsInstances = { lplr.Character, gameCamera, AntiFallPart }
+                    rayParams.CollisionGroup = root.CollisionGroup
+
+                    if WallCheck.Enabled then
+                        local ray = workspace:Raycast(root.Position, velocity * dt, rayParams)
+                        if ray then
+                            velocity = velocity - ray.Normal * velocity:Dot(ray.Normal)
+                        end
+                    end
+
+                    -- TP Down logic
+                    if TPDown.Enabled and not InfiniteFly.Enabled then
+                        local airTime = tick() - entitylib.character.AirTime
+
+                        if airTime > 2.1 and not tpActive then
+                            local ray = workspace:Raycast(
+                                root.Position,
+                                Vector3.new(0, -1000, 0),
+                                rayParams
+                            )
+
+                            if ray then
+                                tpActive = true
+                                tpRestoreY = root.Position.Y
+                                tpUntil = tick() + 0.12
+
+                                root.CFrame = CFrame.new(
+                                    root.Position.X,
+                                    ray.Position.Y + humanoid.HipHeight,
+                                    root.Position.Z
+                                )
+                            end
+                        end
+
+                        if tpActive then
+                            velocity = Vector3.zero
+                            if tick() >= tpUntil then
+                                root.CFrame = CFrame.new(
+                                    root.Position.X,
+                                    tpRestoreY,
+                                    root.Position.Z
+                                )
+                                tpActive = false
+                            end
+                        end
+                    end
+
+                    root.AssemblyLinearVelocity = velocity
+                end))
+
+                BetterFly:Clean(inputService.InputBegan:Connect(function(input)
+                    if inputService:GetFocusedTextBox() then return end
+                    if input.KeyCode == Enum.KeyCode.Space then
+                        up = 1
+                    elseif input.KeyCode == Enum.KeyCode.LeftShift then
+                        down = -1
+                    end
+                end))
+
+                BetterFly:Clean(inputService.InputEnded:Connect(function(input)
+                    if input.KeyCode == Enum.KeyCode.Space then
+                        up = 0
+                    elseif input.KeyCode == Enum.KeyCode.LeftShift then
+                        down = 0
+                    end
+                end))
+            else
+                velocity = Vector3.zero
+                tpActive = false
+            end
+        end,
+        Tooltip = 'Improved Fly with smooth TP Down.'
+    })
+
+    Speed = BetterFly:CreateSlider({
+        Name = 'Speed',
+        Min = 1,
+        Max = 30,
+        Default = 26,
+        Suffix = 'studs'
+    })
+
+    Vertical = BetterFly:CreateSlider({
+        Name = 'Vertical Speed',
+        Min = 1,
+        Max = 120,
+        Default = 60,
+        Suffix = 'studs'
+    })
+
+    Accel = BetterFly:CreateSlider({
+        Name = 'Acceleration',
+        Min = 1,
+        Max = 25,
+        Default = 14
+    })
+
+    Hover = BetterFly:CreateToggle({
+        Name = 'Hover',
+        Default = true
+    })
+
+    WallCheck = BetterFly:CreateToggle({
+        Name = 'Wall Check',
+        Default = true
+    })
+
+    TPDown = BetterFly:CreateToggle({
+        Name = 'TP Down',
+        Default = true
+    })
+end)
 
 run(function()
 	local LagbackNotifier
@@ -8694,7 +8780,7 @@ run(function()
             if enabled then
                 local lastnetowner = true
                 LagbackNotifier:Clean(lplr:GetAttributeChangedSignal('LastTeleported'):Connect(function()
-                    vape:CreateNotification('LagbackNotifier', 'Teleport detected', 3)
+                    vape:CreateNotification('1', 'Teleport detected', 3)
                 end))
                 LagbackNotifier:Clean(runService.Heartbeat:Connect(function()
                     local char = lplr.Character
@@ -8704,7 +8790,7 @@ run(function()
                         if lastnetowner ~= isnetworkowner(hrp) then
                             lastnetowner = isnetworkowner(hrp)
                             if not lastnetowner then
-                                vape:CreateNotification('LagbackNotifier', 'Lagback detected', 3)
+                                vape:CreateNotification('2', 'Lagback detected', 3)
                             end
                         end
                     end
@@ -8714,30 +8800,6 @@ run(function()
     })
 end)
 
-run(function()
-	local MassHammerExploit
-
-    MassHammerExploit = vape.Categories.Utility:CreateModule({
-        Name = 'MassHammerExploit',
-        Tooltip = 'Allows you to have infinite health [Requires mass hammer]',
-        Function = function(enabled)
-            while MassHammerExploit.Enabled do
-				local char = lplr.Character
-                if char then
-                    local current = store.hand
-                    local masshammer = getItem('mass_hammer')
-                    if char:GetAttribute('Health') ~= char:GetAttribute('MaxHealth') and masshammer then
-                        switchItem(masshammer.tool, .2)
-                        repeat RemotesInstance.UseMassHammer:FireServer() task.wait() until char:GetAttribute('Health') >= char:GetAttribute('MaxHealth')
-                        task.wait(.1)
-                        switchItem(current.tool, .2)
-                    end
-                end
-                task.wait()
-            end
-        end
-    })
-end)
 
 run(function()
 	local EmoteSpammer
@@ -8976,229 +9038,6 @@ run(function()
     })
 end)																																																																																																																																																															
 
-run(function()
-	local HotbarVisuals: table = {}
-	local HotbarRounding: table  = {}
-	local HotbarHighlight: table  = {}
-	local HotbarColorToggle: table  = {}
-	local HotbarHideSlotIcons: table  = {}
-	local HotbarSlotNumberColorToggle: table  = {}
-	local HotbarSpacing: table  = {Value = 0}
-	local HotbarInvisibility: table  = {Value = 4}
-	local HotbarRoundRadius: table  = {Value = 8}
-	local HotbarColor: table  = {}
-	local HotbarHighlightColor: table  = {}
-	local HotbarSlotNumberColor: table  = {}
-	local hotbarcoloricons: table  = {}
-	local hotbarsloticons: table  = {}
-	local hotbarobjects: table  = {}
-	local hotbarslotgradients: table  = {}
-	local inventoryiconobj: any = nil
-
-	local function hotbarFunction(): (any, any)
-		local icons: any = ({pcall(function() return lplr.PlayerGui.hotbar["1"].ItemsHotbar end)})[2];
-		if not (icons and typeof(icons) == "Instance") then return end;
-
-		inventoryiconobj = icons;
-		pcall(function()
-			local layout: UIListLayout? = icons:FindFirstChildOfClass("UIListLayout");
-			if layout then layout.Padding = UDim.new(0, HotbarSpacing.Value); end
-		end);
-
-		for _, v: Instance in pairs(icons:GetChildren()) do
-			local sloticon: TextLabel? = ({pcall(function() return v:FindFirstChildWhichIsA("ImageButton"):FindFirstChildWhichIsA("TextLabel") end)})[2];
-			if typeof(sloticon) ~= "Instance" then continue end;
-
-			local parent: GuiObject = sloticon.Parent;
-			table.insert(hotbarcoloricons, parent);
-			sloticon.Parent.Transparency = 0.1 * HotbarInvisibility.Value;
-
-			if HotbarColorToggle.Enabled and not HotbarVisualsGradient.Enabled then
-				parent.BackgroundColor3 = Color3.fromHSV(HotbarColor.Hue, HotbarColor.Sat, HotbarColor.Value);
-			elseif HotbarVisualsGradient.Enabled and not parent:FindFirstChildWhichIsA("UIGradient") then
-				parent.BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-				local g: UIGradient = Instance.new("UIGradient");
-				g.Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromHSV(HotbarVisualsGradientColor.Hue, HotbarVisualsGradientColor.Sat, HotbarVisualsGradientColor.Value)),
-					ColorSequenceKeypoint.new(1, Color3.fromHSV(HotbarVisualsGradientColor2.Hue, HotbarVisualsGradientColor2.Sat, HotbarVisualsGradientColor2.Value))
-				});
-				g.Parent = parent;
-				table.insert(hotbarslotgradients, g);
-			end;
-
-			if HotbarRounding.Enabled then
-				local r: UICorner = Instance.new("UICorner"); r.CornerRadius = UDim.new(0, HotbarRoundRadius.Value);
-				r.Parent = parent; table.insert(hotbarobjects, r);
-			end;
-
-			if HotbarHighlight.Enabled then
-				local hl: UIStroke = Instance.new("UIStroke");
-				hl.Color = Color3.fromHSV(HotbarHighlightColor.Hue, HotbarHighlightColor.Sat, HotbarHighlightColor.Value);
-				hl.Thickness = 1.3; hl.Parent = parent;
-				table.insert(hotbarobjects, hl);
-			end;
-
-			if HotbarHideSlotIcons.Enabled then sloticon.Visible = false; end;
-			table.insert(hotbarsloticons, sloticon);
-		end;
-	end;
-
-	HotbarVisuals = vape.Categories.Utility:CreateModule({
-		["Name"] = 'HotbarVisuals',
-		["Tooltip"] = 'Add customization to your hotbar.',
-		["Function"] = function(callback: boolean): void
-			if callback then 
-				task.spawn(function()
-					table.insert(HotbarVisuals.Connections, lplr.PlayerGui.DescendantAdded:Connect(function(v)
-						if v.Name == "hotbar" then hotbarFunction(); end
-					end));
-					hotbarFunction();
-				end);
-				table.insert(HotbarVisuals.Connections, runService.RenderStepped:Connect(function()
-					for _, v in hotbarcoloricons do pcall(function() v.Transparency = 0.1 * HotbarInvisibility["Value"]; end); end
-				end));
-			else
-				for _: any, v: any in hotbarsloticons do pcall(function() v.Visible = true; end); end
-				for _: any, v: any in hotbarcoloricons do pcall(function() v.BackgroundColor3 = Color3.fromRGB(29, 36, 46); end); end
-				for _: any, v: any in hotbarobjects do pcall(function() v:Destroy(); end); end
-				for _: any, v: any in hotbarslotgradients do pcall(function() v:Destroy(); end); end
-				table.clear(hotbarobjects); table.clear(hotbarsloticons); table.clear(hotbarcoloricons);
-			end;
-		end;
-	})
-	local function forceRefresh()
-		if HotbarVisuals["Enabled"] then HotbarVisuals:Toggle(); HotbarVisuals:Toggle(); end;
-	end;
-	HotbarColorToggle = HotbarVisuals:CreateToggle({
-		["Name"] = "Slot Color",
-		["Function"] = function(callback: boolean): void pcall(function() HotbarColor.Object.Visible = callback; end); forceRefresh(); end
-	});
-	HotbarVisualsGradient = HotbarVisuals:CreateToggle({
-		["Name"] = "Gradient Slot Color",
-		["Function"] = function(callback: boolean): void
-			pcall(function()
-				HotbarVisualsGradientColor.Object.Visible = callback;
-				HotbarVisualsGradientColor2.Object.Visible = callback;
-			end);
-			forceRefresh();
-		end;
-	});
-	HotbarVisualsGradientColor = HotbarVisuals:CreateColorSlider({
-		["Name"] = 'Gradient Color',
-		["Function"] = function(h, s, v)
-			for i: any, v: any in hotbarslotgradients do 
-				pcall(function() v.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHSV(HotbarVisualsGradientColor.Hue, HotbarVisualsGradientColor.Sat, HotbarVisualsGradientColor.Value)), ColorSequenceKeypoint.new(1, Color3.fromHSV(HotbarVisualsGradientColor2.Hue, HotbarVisualsGradientColor2.Sat, HotbarVisualsGradientColor2.Value))}) end)
-			end;
-		end;
-	})
-	HotbarVisualsGradientColor2 = HotbarVisuals:CreateColorSlider({
-		["Name"] = 'Gradient Color 2',
-		["Function"] = function(h, s, v)
-			for i: any,v: any in hotbarslotgradients do 
-				pcall(function() v.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHSV(HotbarVisualsGradientColor.Hue, HotbarVisualsGradientColor.Sat, HotbarVisualsGradientColor.Value)), ColorSequenceKeypoint.new(1, Color3.fromHSV(HotbarVisualsGradientColor2.Hue, HotbarVisualsGradientColor2.Sat, HotbarVisualsGradientColor2.Value))}) end)
-			end;
-		end;
-	})
-	HotbarColor = HotbarVisuals:CreateColorSlider({
-		["Name"] = 'Slot Color',
-		["Function"] = function(h, s, v)
-			for i: any,v: any in hotbarcoloricons do
-				if HotbarColorToggle["Enabled"] then
-					pcall(function() v.BackgroundColor3 = Color3.fromHSV(HotbarColor.Hue, HotbarColor.Sat, HotbarColor.Value) end) 
-				end;
-			end;
-		end;
-	})
-	HotbarRounding = HotbarVisuals:CreateToggle({
-		["Name"] = 'Rounding',
-		["Function"] = function(callback: boolean): void pcall(function() HotbarRoundRadius.Object.Visible = callback; end); forceRefresh(); end
-	})
-	HotbarRoundRadius = HotbarVisuals:CreateSlider({
-		["Name"] = 'Corner Radius',
-		["Min"] = 1,
-		["Max"] = 20,
-		["Function"] = function(callback: boolean): void
-			for i,v in hotbarobjects do 
-				pcall(function() v.CornerRadius = UDim.new(0, callback) end);
-			end;
-		end;
-	})
-	HotbarHighlight = HotbarVisuals:CreateToggle({
-		["Name"] = 'Outline Highlight',
-		["Function"] = function(callback: boolean): void pcall(function() HotbarHighlightColor.Object.Visible = callback; end); forceRefresh(); end
-	})
-	HotbarHighlightColor = HotbarVisuals:CreateColorSlider({
-		["Name"] = 'Highlight Color',
-		["Function"] = function(h, s, v)
-			for i,v in hotbarobjects do 
-				if v:IsA('UIStroke') and HotbarHighlight.Enabled then 
-					pcall(function() v.Color = Color3.fromHSV(HotbarHighlightColor.Hue, HotbarHighlightColor.Sat, HotbarHighlightColor.Value) end)
-				end;
-			end;
-		end;
-	})
-	HotbarHideSlotIcons = HotbarVisuals:CreateToggle({
-		["Name"] = "No Slot Numbers", ["Function"] = forceRefresh
-	});
-	HotbarInvisibility = HotbarVisuals:CreateSlider({
-		["Name"] = 'Invisibility',
-		["Min"] = 0,
-		["Max"] = 10,
-		["Default"] = 4,
-		["Function"] = function(value)
-			for i,v in hotbarcoloricons do 
-				pcall(function() v.Transparency = (0.1 * value) end); 
-			end;
-		end;
-	})
-	HotbarSpacing = HotbarVisuals:CreateSlider({
-		["Name"] = 'Spacing',
-		["Min"] = 0,
-		["Max"] = 5,
-		["Function"] = function(value)
-			if HotbarVisuals["Enabled"] then 
-				pcall(function() inventoryiconobj:FindFirstChildOfClass('UIListLayout').Padding = UDim.new(0, value) end);
-			end;
-		end;
-	})
-	HotbarColor.Object.Visible = false;
-	HotbarRoundRadius.Object.Visible = false;
-	HotbarHighlightColor.Object.Visible = false;
-end);
-
-
-
-if not isfile('newmeteor/profiles/nofirst.txt') then
-	writefile('newmeteor/profiles/nofirst.txt', 'true')
-end
-
-run(function()
-    local conn
-
-    PixelSword = vape.Categories.Combat:CreateModule({
-        Name = "PixelSword",
-        Function = function(callback)
-            if callback then
-                conn = workspace.CurrentCamera.Viewmodel.ChildAdded:Connect(function(x)
-                    if x and x:FindFirstChild("Handle") then
-                        if string.find(x.Name:lower(), 'sword') then
-                            x.Handle.Material = Enum.Material.ForceField
-                            x.Handle.MeshId = "rbxassetid://13471207377"
-                            x.Handle.BrickColor = BrickColor.new("Hot pink")
-                        end
-                    end
-                end)
-            else
-                if conn then
-                    conn:Disconnect()
-                    conn = nil
-                end
-            end
-        end,
-        Default = false,
-        Tooltip = "Customizes Your Swords"
-    })
-end)
 
 run(function()
     local AutoBuyWool
@@ -9232,7 +9071,7 @@ run(function()
     end
 
     AutoBuyWool = vape.Categories.Inventory:CreateModule({
-        Name = 'AutoBuyWool',
+        Name = 'Wool buyer',
         Tooltip = 'Buys White Wool instantly when you have ≥8 iron near shop',
         Function = function(callback)
             if callback then
@@ -9508,210 +9347,8 @@ run(function()
         Tooltip = "Makes everyone a furry except for you"
     })
 end)
-run(function()
-    FirstPersonArm = vape.Categories.Utility:CreateModule({
-        Name = 'FirstPersonArm',
-        Function = function(callback)
-            local viewmodel = workspace:FindFirstChild("Camera") and workspace.Camera:FindFirstChild("Viewmodel")
-            if viewmodel then
-                local lowerArm = viewmodel:FindFirstChild("RightLowerArm")
-                local hand = viewmodel:FindFirstChild("RightHand")
 
-                if lowerArm and lowerArm:IsA("MeshPart") then
-                    lowerArm.Transparency = callback and 0 or 1
-                end
-
-                if hand and hand:IsA("MeshPart") then
-                    hand.Transparency = callback and 0 or 1
-                end
-            end
-        end,
-        Default = false,
-        Tooltip = "Self Explanatory"
-    })
-end)
 																																					
-local AutoPlayAllow = nil
-local AutoWin = {Enabled = false}
-run(function()
-	local antihit
-	local antihitrange 
-	local antihitairtime 
-	local antihitsettings 
-	local antihitgroundtime 
-	local antihitautoair
-
-	local oldroot
-	local hip
-	local clone
-
-	local function createClone()
-		if entitylib.isAlive and entitylib.character.Humanoid.Health > 0 and (not oldroot or not oldroot.Parent) then
-			hip = entitylib.character.Humanoid.HipHeight
-			oldroot = entitylib.character.HumanoidRootPart
-			if not lplr.Character.Parent then return false end
-			lplr.Character.Parent = game
-			clone = oldroot:Clone()
-			clone.Parent = lplr.Character
-			oldroot.Parent = gameCamera
-			bedwars.QueryUtil:setQueryIgnored(oldroot, true)
-			lplr.Character.PrimaryPart = clone
-			lplr.Character.Parent = workspace
-			for _, v in lplr.Character:GetDescendants() do
-				if v:IsA('Weld') or v:IsA('Motor6D') then
-					if v.Part0 == oldroot then v.Part0 = clone end
-					if v.Part1 == oldroot then v.Part1 = clone end
-				end
-			end
-			return true
-		end
-		return false
-	end
-	
-	local function destroyClone()
-		if not oldroot or not oldroot.Parent or not entitylib.isAlive then return false end
-		lplr.Character.Parent = game
-		oldroot.Parent = lplr.Character
-		lplr.Character.PrimaryPart = oldroot
-		lplr.Character.Parent = workspace
-		oldroot.CanCollide = true
-		for _, v in lplr.Character:GetDescendants() do
-			if v:IsA('Weld') or v:IsA('Motor6D') then
-				if v.Part0 == clone then v.Part0 = oldroot end
-				if v.Part1 == clone then v.Part1 = oldroot end
-			end
-		end
-		local oldcf = clone.CFrame
-		if clone then
-			clone:Destroy()
-			clone = nil
-		end
-		oldroot.Transparency = 1
-		oldroot = nil
-		entitylib.character.RootPart.CFrame = oldcf + Vector3.new(0, 12, 0)
-		task.spawn(function()
-			for i = 1, 12 do
-				entitylib.character.RootPart.Velocity = Vector3.zero
-				task.wait()
-			end
-		end)
-		entitylib.character.Humanoid.HipHeight = hip or 2
-	end
-
-	local rayCheck = RaycastParams.new()
-
-	local getY = function()
-		if oldroot and oldroot.Parent then
-			return 40
-		end
-		return 40
-	end
-
-	local tpbackup = false
-
-	local lastantihitting = nil
-
-	local projectileHitting = false
-
-	local FlyLandTick = 0
-
-	antihit = vape.Categories.Blatant:CreateModule({
-		Name = 'Anti Hit',
-		Function = function(call)
-			if call then
-				antihit:Clean(runService.PreSimulation:Connect(function()
-					if entitylib.isAlive and tick() > (FlyLandTick or 0) then
-						local cf = clone and clone.Parent and {clone.CFrame:GetComponents()} or {entitylib.character.HumanoidRootPart.CFrame:GetComponents()}
-						if store.KillauraTarget and not antihitting then
-							cf[2] = store.KillauraTarget.Character.PrimaryPart.CFrame.Y
-						end
-						if oldroot and oldroot.Parent then
-							oldroot.CFrame = antihitting and (tick() - entitylib.character.AirTime) < 2 and CFrame.new(clone.CFrame.X, oldroot.CFrame.Y, clone.CFrame.Z) or CFrame.new(unpack(cf)) + Vector3.new(0, 6, 0)
-							if not antihitting and lastantihitting then
-								lastantihitting = antihitting
-								for i = 1, 4 do
-									oldroot.Velocity = Vector3.zero
-									task.wait()
-								end
-							else
-								lastantihitting = antihitting
-							end
-						end
-					end
-				end))
-				repeat
-				  	if store.matchState == 0 or not entitylib.isAlive or tick() < (FlyLandTick or 0) then task.wait() continue end
-					if AutoWin.Enabled and not AutoPlayAllow then return end
-					rayCheck.FilterDescendantsInstances = {lplr.Character, AntiFallPart}
-					local plr = entitylib.AllPosition({
-						Range = antihitrange.Value,
-						Part = 'RootPart',
-						Players = antihitsettings.Players.Enabled,
-						NPCs = antihitsettings.NPCs.Enabled,
-						Limit = 1
-					})[1]
-					if entitylib.character.AirTime and plr and (tick() - entitylib.character.AirTime) < 2 or projectileHitting then
-						createClone()
-						if tpbackup then
-							tpbackup = false
-						else
-							tpbackup = true
-						end
-						antihitting = not tpbackup
-						projectileHitting = false
-						if not tpbackup then
-							oldroot.CFrame += Vector3.new(0, getY(), 0)
-						end
-					else
-						antihitting = false
-						destroyClone()
-					end
-					local delayv = antihitautoair.Enabled and (tpbackup and store.attackSpeed and 0.14) or (tpbackup and antihitairtime.Value or antihitgroundtime.Value) 
-					task.wait(delayv)
-				until not antihit.Enabled
-			else
-				destroyClone()
-				tpbackup = false
-			end
-		end
-	})
-	antihitsettings = antihit:CreateTargets({
-		Players = true, 
-		NPCs = false
-	})
-	antihitautoair = antihit:CreateToggle({
-		Name = 'Auto Predict',
-		Default = true,
-		Function = function(call)
-			if antihitairtime then
-				antihitairtime.Object.Visible = not call
-				antihitgroundtime.Object.Visible = not call
-			end
-		end
-	})
-	antihitrange = antihit:CreateSlider({
-		Name = 'Range',
-		Min = 1,
-		Max = 40,
-		Default = 25
-	})
-	antihitgroundtime = antihit:CreateSlider({
-		Name = 'Ground Time',
-		Decimal = 15,
-		Min = 0,
-		Max = 2,
-		Default = 0.14
-	})
-	antihitairtime = antihit:CreateSlider({
-		Name = 'Air Time',
-		Decimal = 15,
-		Min = 0,
-		Max = 2,
-		Default = 0.2
-	})
-	antihitgroundtime.Object.Visible = false
-	antihitairtime.Object.Visible = false
-end)
 run(function()
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
@@ -10081,21 +9718,6 @@ run(function()
     })
 end)
 
-run(function()
-    GetHost = vape.Categories.Utility:CreateModule({
-        Name = 'GetHost',
-        Function = function(enabled)
-            local player = game.Players.LocalPlayer
-            if enabled then
-                player:SetAttribute("CustomMatchRole", "host")
-            else
-                player:SetAttribute("CustomMatchRole", nil) -- remove the role
-            end
-        end,
-        Default = false,
-        Tooltip = ":troll:"
-    })
-end)
 run(function()
     local pack1
 	local packassetids = {
