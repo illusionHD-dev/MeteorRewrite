@@ -1,6 +1,7 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
 	func()
 end
@@ -3234,6 +3235,127 @@ run(function()
 		Visible = false,
 		Darker = true
 	})
+end)
+local BetterSpeed
+run(function()
+    local Value
+    local Accel
+    local Friction
+    local WallCheck
+    local AutoJump
+    local AlwaysJump
+
+    local rayCheck = RaycastParams.new()
+    rayCheck.RespectCanCollide = true
+
+    local velocity = Vector3.zero
+    local lastJump = 0
+
+    BetterSpeed = vape.Categories.Blatant:CreateModule({
+        Name = 'BetterSpeed',
+        Function = function(callback)
+            frictionTable.BetterSpeed = callback or nil
+            updateVelocity()
+
+            if callback then
+                velocity = Vector3.zero
+
+                BetterSpeed:Clean(runService.PreSimulation:Connect(function(dt)
+                    if not entitylib.isAlive then return end
+                    if Fly.Enabled or InfiniteFly.Enabled or LongJump.Enabled then return end
+                    if not isnetworkowner(entitylib.character.RootPart) then return end
+
+                    local humanoid = entitylib.character.Humanoid
+                    local root = entitylib.character.RootPart
+                    local state = humanoid:GetState()
+
+                    if state == Enum.HumanoidStateType.Climbing then return end
+
+                    local moveDir = AntiFallDirection or humanoid.MoveDirection
+                    local currentSpeed = getSpeed()
+
+                    local targetVel = moveDir * Value.Value
+                    velocity = velocity:Lerp(targetVel, math.clamp(Accel.Value * dt, 0, 1))
+
+                    -- friction preservation
+                    velocity *= Friction.Value
+
+                    if WallCheck.Enabled then
+                        rayCheck.FilterDescendantsInstances = { lplr.Character, gameCamera }
+                        rayCheck.CollisionGroup = root.CollisionGroup
+                        local ray = workspace:Raycast(root.Position, velocity * dt, rayCheck)
+                        if ray then
+                            velocity = velocity - ray.Normal * velocity:Dot(ray.Normal)
+                        end
+                    end
+
+                    root.CFrame += velocity * dt
+                    root.AssemblyLinearVelocity =
+                        Vector3.new(velocity.X, root.AssemblyLinearVelocity.Y, velocity.Z)
+
+                    -- smarter AutoJump
+                    if AutoJump.Enabled and moveDir ~= Vector3.zero then
+                        if state == Enum.HumanoidStateType.Running
+                        or state == Enum.HumanoidStateType.Landed then
+                            if (AlwaysJump.Enabled or Attacking) and tick() - lastJump > 0.25 then
+                                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                                lastJump = tick()
+                            end
+                        end
+                    end
+                end))
+            else
+                velocity = Vector3.zero
+            end
+        end,
+        ExtraText = function()
+            return 'Heatseeker'
+        end,
+        Tooltip = 'Smoother, more stable Speed.'
+    })
+
+    Value = BetterSpeed:CreateSlider({
+        Name = 'Speed',
+        Min = 1,
+        Max = 26,
+        Default = 24,
+        Suffix = function(v)
+            return v == 1 and 'stud' or 'studs'
+        end
+    })
+
+    Accel = BetterSpeed:CreateSlider({
+        Name = 'Acceleration',
+        Min = 1,
+        Max = 30,
+        Default = 18
+    })
+
+    Friction = BetterSpeed:CreateSlider({
+        Name = 'Friction',
+        Min = 80,
+        Max = 100,
+        Default = 96,
+        Suffix = '%'
+    })
+
+    WallCheck = BetterSpeed:CreateToggle({
+        Name = 'Wall Check',
+        Default = true
+    })
+
+    AutoJump = BetterSpeed:CreateToggle({
+        Name = 'AutoJump',
+        Function = function(cb)
+            AlwaysJump.Object.Visible = cb
+        end
+    })
+
+    AlwaysJump = BetterSpeed:CreateToggle({
+        Name = 'Always Jump',
+        Visible = false,
+        Darker = true
+    })
 end)
 	
 run(function()
