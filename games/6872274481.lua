@@ -4,6 +4,7 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
 	func()
 end
@@ -1735,7 +1736,107 @@ run(function()
 		end
 	})
 end)
-	
+run(function()
+    local AntiVoidPlus
+    local AntiVoidDir = Vector3.zero
+    local FloorY = nil
+    local AntiVoidPart
+    local rayCheck = RaycastParams.new()
+    rayCheck.RespectCanCollide = true
+
+    local function getLowestBlock()
+        local minY = math.huge
+        for _, pos in bedwars.BlockController:getStore():getAllBlockPositions() do
+            local worldPos = pos * 3
+            if worldPos.Y < minY and not getPlacedBlock(worldPos + Vector3.new(0, 3, 0)) then
+                minY = worldPos.Y
+            end
+        end
+        return minY
+    end
+
+    AntiVoidPlus = vape.Categories.Blatant:CreateModule({
+        Name = "AntiVoid+",
+        Tooltip = "Prevents you from falling into the void smoothly",
+        Function = function(enabled)
+            if not enabled then
+                AntiVoidDir = Vector3.zero
+                if AntiVoidPart then AntiVoidPart:Destroy() end
+                return
+            end
+
+            FloorY = getLowestBlock()
+
+            -- Optional visual / collide part
+            if not AntiVoidPart then
+                AntiVoidPart = Instance.new("Part")
+                AntiVoidPart.Size = Vector3.new(10000, 1, 10000)
+                AntiVoidPart.Anchored = true
+                AntiVoidPart.CanQuery = false
+                AntiVoidPart.Position = Vector3.new(0, FloorY - 2, 0)
+                AntiVoidPart.Transparency = 0.5
+                AntiVoidPart.Color = Color3.fromRGB(0, 255, 255)
+                AntiVoidPart.CanCollide = false
+                AntiVoidPart.Parent = workspace
+            end
+
+            AntiVoidPlus:Clean(runService.PreSimulation:Connect(function(dt)
+                if not entitylib.isAlive then return end
+                local root = entitylib.character.RootPart
+                if root.Position.Y < FloorY + 5 then
+                    if AntiVoidPlus.Mode.Value == "Smooth" then
+                        AntiVoidDir = Vector3.new(0, math.max(15, (FloorY + 3 - root.Position.Y) * 3), 0)
+                        root.AssemblyLinearVelocity = Vector3.new(
+                            root.AssemblyLinearVelocity.X,
+                            AntiVoidDir.Y,
+                            root.AssemblyLinearVelocity.Z
+                        )
+                        -- Optional: move toward camera direction
+                        if vape.Modules.BetterFly and vape.Modules.BetterFly.Enabled then
+                            local lookDir = gameCamera.CFrame.LookVector * getSpeed()
+                            root.AssemblyLinearVelocity += Vector3.new(lookDir.X, 0, lookDir.Z)
+                        end
+                    elseif AntiVoidPlus.Mode.Value == "Velocity" then
+                        root.Velocity = Vector3.new(root.Velocity.X, 100, root.Velocity.Z)
+                    elseif AntiVoidPlus.Mode.Value == "Collide" then
+                        AntiVoidPart.CanCollide = true
+                    end
+                else
+                    AntiVoidDir = Vector3.zero
+                    if AntiVoidPlus.Mode.Value == "Collide" then
+                        AntiVoidPart.CanCollide = false
+                    end
+                end
+            end))
+        end
+    })
+
+    -- Modes
+    AntiVoidPlus.Mode = AntiVoidPlus:CreateDropdown({
+        Name = "Mode",
+        List = {"Smooth", "Velocity", "Collide"},
+        Function = function(val)
+            if AntiVoidPart then
+                AntiVoidPart.CanCollide = val == "Collide"
+            end
+        end,
+        Tooltip = "Smooth: gradual upward push\nVelocity: sudden boost\nCollide: walk on invisible floor"
+    })
+
+    -- Floor visuals
+    AntiVoidPlus:CreateColorSlider({
+        Name = "Floor Color",
+        DefaultOpacity = 0.5,
+        Function = function(h, s, v, o)
+            if AntiVoidPart then
+                AntiVoidPart.Color = Color3.fromHSV(h, s, v)
+                AntiVoidPart.Transparency = 1 - o
+            end
+        end
+    })
+end)
+
+
 run(function()
 	local FastBreak
 	local Time
@@ -2829,7 +2930,79 @@ run(function()
 		Name = 'Camera Direction'
 	})
 end)
-	
+run(function()
+    local LongJumpPlus
+    local JumpSpeed, JumpTick, Direction = 0, 0, Vector3.zero
+    local LJSpeeds = {}
+    local CameraDir
+
+    local function applyVelocity(root, dt)
+        if JumpTick > tick() then
+            local horizontal = Direction * JumpSpeed
+            root.AssemblyLinearVelocity = Vector3.new(
+                horizontal.X,
+                root.AssemblyLinearVelocity.Y,
+                horizontal.Z
+            )
+        else
+            JumpSpeed = 0
+        end
+    end
+
+    LongJumpPlus = vape.Categories.Blatant:CreateModule({
+        Name = "LongJump+",
+        Function = function(callback)
+            if not callback then
+                JumpSpeed = 0
+                return
+            end
+
+            LongJumpPlus:Clean(runService.PreSimulation:Connect(function(dt)
+                local root = entitylib.isAlive and entitylib.character.RootPart
+                if not root or not isnetworkowner(root) then return end
+                applyVelocity(root, dt)
+            end))
+
+            -- Example: use knockback or ability to trigger jump
+            LongJumpPlus:Clean(vapeEvents.EntityDamageEvent.Event:Connect(function(damageTable)
+                if damageTable.entityInstance ~= lplr.Character then return end
+
+                local knockback = bedwars.KnockbackUtil.calculateKnockbackVelocity(
+                    Vector3.one, 1, {vertical = 0, horizontal = 1}
+                ).Magnitude
+
+                JumpSpeed = math.max(knockback * 1.2, JumpSpeed)
+                JumpTick = tick() + 2.5
+                Direction = (entitylib.character.RootPart.Position - damageTable.fromPosition).Unit
+            end))
+        end,
+        Tooltip = "Jump farther with better control and pulse options",
+    })
+
+    -- Slider for speed
+    LJSpeeds.default = LongJumpPlus:CreateSlider({
+        Name = "Jump Speed",
+        Min = 20,
+        Max = 37,
+        Default = 37,
+        Suffix = function(val) return val.." studs" end
+    })
+
+    -- Camera direction toggle
+    CameraDir = LongJumpPlus:CreateToggle({
+        Name = "Camera Direction",
+        Function = function(enabled)
+            if enabled then
+                LongJumpPlus:Clean(runService.RenderStepped:Connect(function()
+                    if entitylib.isAlive then
+                        Direction = gameCamera.CFrame.LookVector
+                    end
+                end))
+            end
+        end
+    })
+end)
+
 run(function()
 	local NoFall
 	local Mode
@@ -3255,7 +3428,7 @@ run(function()
     local pulseState = true
 
     BetterSpeed = vape.Categories.Blatant:CreateModule({
-        Name = 'BetterSpeed',
+        Name = 'Speed +',
         Function = function(callback)
             frictionTable.BetterSpeed = callback or nil
             updateVelocity()
@@ -3336,8 +3509,8 @@ run(function()
     SpeedValue = BetterSpeed:CreateSlider({
         Name = 'Speed',
         Min = 1,
-        Max = 30,
-        Default = 26,
+        Max = 23,
+        Default = 20,
         Suffix = function(v)
             return v == 1 and 'stud' or 'studs'
         end
@@ -3352,7 +3525,8 @@ run(function()
         Name = 'Pulse Strength',
         Min = 1,
         Max = 1.5,
-        Default = 1.25
+        Default = 1.25,
+	Decimal = 100
     })
 
     PulseDelay = BetterSpeed:CreateSlider({
@@ -3360,6 +3534,7 @@ run(function()
         Min = 0.15,
         Max = 0.5,
         Default = 0.25,
+	Decimal = 100,
         Suffix = 's'
     })
 
@@ -8777,7 +8952,7 @@ run(function()
     local tpUntil = 0
 
     BetterFly = vape.Categories.Blatant:CreateModule({
-        Name = 'BetterFly',
+        Name = 'Fly +',
         Function = function(callback)
             frictionTable.BetterFly = callback or nil
             updateVelocity()
@@ -8881,15 +9056,15 @@ run(function()
     Speed = BetterFly:CreateSlider({
         Name = 'Speed',
         Min = 1,
-        Max = 30,
-        Default = 26,
+        Max = 23,
+        Default = 23,
         Suffix = 'studs'
     })
 
     Vertical = BetterFly:CreateSlider({
         Name = 'Vertical Speed',
         Min = 1,
-        Max = 120,
+        Max = 100,
         Default = 60,
         Suffix = 'studs'
     })
@@ -8948,72 +9123,45 @@ end)
 
 run(function()
     local AntiLagback
-
     local lastSafeCFrame
+    local lastHRPPos
+    local hrp
+    local lagThreshold = 6 -- studs movement per frame considered lagback
+    local cooldown = 0.1
     local lastFix = 0
-    local COOLDOWN = 0.35
 
     AntiLagback = vape.Categories.Utility:CreateModule({
         Name = 'AntiLagback',
         Function = function(enabled)
             if not enabled then return end
 
-            local lastnetowner = true
-
-            -- cache last good position
-            AntiLagback:Clean(runService.Heartbeat:Connect(function()
+            AntiLagback:Clean(runService.PreSimulation:Connect(function(dt)
                 local char = lplr.Character
-                local hrp = char and char:FindFirstChild('HumanoidRootPart')
+                hrp = char and char:FindFirstChild('HumanoidRootPart')
+                if not hrp then return end
 
-                if hrp and isnetworkowner(hrp) then
-                    lastSafeCFrame = hrp.CFrame
-                end
-            end))
-
-            local function fixLagback(reason)
-                if tick() - lastFix < COOLDOWN then return end
-                lastFix = tick()
-
-                local char = lplr.Character
-                local hrp = char and char:FindFirstChild('HumanoidRootPart')
-                if not hrp or not lastSafeCFrame then return end
-
-                hrp.CFrame = lastSafeCFrame
-                hrp.AssemblyLinearVelocity = Vector3.zero
-
-                vape:CreateNotification(
-                    'AntiLagback',
-                    'Corrected lagback (' .. reason .. ')',
-                    2
-                )
-            end
-
-            -- teleport attribute detection
-            AntiLagback:Clean(
-                lplr:GetAttributeChangedSignal('LastTeleported'):Connect(function()
-                    fixLagback('Teleport')
-                end)
-            )
-
-            -- network ownership loss detection
-            AntiLagback:Clean(runService.Heartbeat:Connect(function()
-                local char = lplr.Character
-                local hrp = char and char:FindFirstChild('HumanoidRootPart')
-
-                if hrp then
-                    local owner = isnetworkowner(hrp)
-                    if lastnetowner ~= owner then
-                        lastnetowner = owner
-                        if not owner then
-                            fixLagback('NetOwner')
+                -- Cache last safe position when moving normally
+                if lastHRPPos then
+                    local distance = (hrp.Position - lastHRPPos).Magnitude
+                    if distance > lagThreshold and tick() - lastFix > cooldown then
+                        -- detected rubberband
+                        lastFix = tick()
+                        if lastSafeCFrame then
+                            hrp.CFrame = lastSafeCFrame
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            vape:CreateNotification('AntiLagback', 'Lagback prevented!', 1.5)
                         end
                     end
                 end
+
+                lastSafeCFrame = hrp.CFrame
+                lastHRPPos = hrp.Position
             end))
         end,
-        Tooltip = 'TPs you back when a lagback is detected.'
+        Tooltip = 'Prevents lagback by detecting sudden position resets.'
     })
 end)
+
 
 run(function()
 	local EmoteSpammer
