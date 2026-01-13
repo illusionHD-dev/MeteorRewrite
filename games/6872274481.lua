@@ -2,6 +2,7 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
 	func()
 end
@@ -3239,17 +3240,18 @@ end)
 local BetterSpeed
 run(function()
     local Value
-    local Accel
-    local Friction
     local WallCheck
     local AutoJump
     local AlwaysJump
+    local Pulse
+    local PulseStrength
+    local PulseDelay
 
     local rayCheck = RaycastParams.new()
     rayCheck.RespectCanCollide = true
 
-    local velocity = Vector3.zero
-    local lastJump = 0
+    local pulseTick = 0
+    local pulseOn = false
 
     BetterSpeed = vape.Categories.Blatant:CreateModule({
         Name = 'BetterSpeed',
@@ -3257,8 +3259,18 @@ run(function()
             frictionTable.BetterSpeed = callback or nil
             updateVelocity()
 
+            -- Higher WindWalker multiplier
+            pcall(function()
+                debug.setconstant(
+                    bedwars.WindWalkerController.updateSpeed,
+                    7,
+                    callback and 'constantSpeedMultiplier' or 'moveSpeedMultiplier'
+                )
+            end)
+
             if callback then
-                velocity = Vector3.zero
+                pulseTick = tick()
+                pulseOn = true
 
                 BetterSpeed:Clean(runService.PreSimulation:Connect(function(dt)
                     if not entitylib.isAlive then return end
@@ -3268,75 +3280,82 @@ run(function()
                     local humanoid = entitylib.character.Humanoid
                     local root = entitylib.character.RootPart
                     local state = humanoid:GetState()
-
                     if state == Enum.HumanoidStateType.Climbing then return end
 
                     local moveDir = AntiFallDirection or humanoid.MoveDirection
-                    local currentSpeed = getSpeed()
+                    if moveDir == Vector3.zero then return end
 
-                    local targetVel = moveDir * Value.Value
-                    velocity = velocity:Lerp(targetVel, math.clamp(Accel.Value * dt, 0, 1))
+                    -- Pulse logic
+                    local speedMult = 1
+                    if Pulse.Enabled then
+                        if tick() - pulseTick > PulseDelay.Value then
+                            pulseOn = not pulseOn
+                            pulseTick = tick()
+                        end
+                        speedMult = pulseOn and PulseStrength.Value or 1
+                    end
 
-                    -- friction preservation
-                    velocity *= Friction.Value
+                    local velo = getSpeed()
+                    local targetSpeed = Value.Value * speedMult
+                    local destination =
+                        moveDir * math.max(targetSpeed - velo, 0) * dt
 
                     if WallCheck.Enabled then
                         rayCheck.FilterDescendantsInstances = { lplr.Character, gameCamera }
                         rayCheck.CollisionGroup = root.CollisionGroup
-                        local ray = workspace:Raycast(root.Position, velocity * dt, rayCheck)
+                        local ray = workspace:Raycast(root.Position, destination, rayCheck)
                         if ray then
-                            velocity = velocity - ray.Normal * velocity:Dot(ray.Normal)
+                            destination = ((ray.Position + ray.Normal) - root.Position)
                         end
                     end
 
-                    root.CFrame += velocity * dt
+                    root.CFrame += destination
                     root.AssemblyLinearVelocity =
-                        Vector3.new(velocity.X, root.AssemblyLinearVelocity.Y, velocity.Z)
+                        (moveDir * velo) +
+                        Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
 
-                    -- smarter AutoJump
-                    if AutoJump.Enabled and moveDir ~= Vector3.zero then
-                        if state == Enum.HumanoidStateType.Running
-                        or state == Enum.HumanoidStateType.Landed then
-                            if (AlwaysJump.Enabled or Attacking) and tick() - lastJump > 0.25 then
-                                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                                lastJump = tick()
-                            end
-                        end
+                    if AutoJump.Enabled
+                        and (state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.Landed)
+                        and (AlwaysJump.Enabled or Attacking) then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                     end
                 end))
-            else
-                velocity = Vector3.zero
             end
         end,
         ExtraText = function()
-            return 'Heatseeker'
+            return Pulse.Enabled and 'Pulse' or 'Heatseeker'
         end,
-        Tooltip = 'Smoother, more stable Speed.'
+        Tooltip = 'High WindWalker speed with pulse bypass.'
     })
 
     Value = BetterSpeed:CreateSlider({
         Name = 'Speed',
         Min = 1,
-        Max = 26,
-        Default = 24,
+        Max = 20,
+        Default = 20,
         Suffix = function(v)
             return v == 1 and 'stud' or 'studs'
         end
     })
 
-    Accel = BetterSpeed:CreateSlider({
-        Name = 'Acceleration',
-        Min = 1,
-        Max = 30,
-        Default = 18
+    Pulse = BetterSpeed:CreateToggle({
+        Name = 'Pulse',
+        Default = true
     })
 
-    Friction = BetterSpeed:CreateSlider({
-        Name = 'Friction',
-        Min = 80,
-        Max = 100,
-        Default = 96,
-        Suffix = '%'
+    PulseStrength = BetterSpeed:CreateSlider({
+        Name = 'Pulse Strength',
+        Min = 1,
+        Max = 1.5,
+        Default = 1.37
+    })
+
+    PulseDelay = BetterSpeed:CreateSlider({
+        Name = 'Pulse Delay',
+        Min = 0.1,
+        Max = 0.6,
+        Default = 0.25,
+        Suffix = 's'
     })
 
     WallCheck = BetterSpeed:CreateToggle({
