@@ -2,9 +2,9 @@
 local mainapi = {
 	Categories = {},
 	GUIColor = {
-		Hue = 0.46,
-		Sat = 0.96,
-		Value = 0.52
+		Hue = 1,
+		Sat = 1,
+		Value = 1
 	},
 	HeldKeybinds = {},
 	Keybind = {'RightShift'},
@@ -52,7 +52,7 @@ local tween = {
 	tweenstwo = {}
 }
 local uipallet = {
-	Main = Color3.fromRGB(16, 18, 13),
+	Main = Color3.fromRGB(20, 14, 20),
 	Text = Color3.fromRGB(222, 222, 222),
 	Font = Font.fromEnum(Enum.Font.GothamBold),
 	FontSemiBold = Font.fromEnum(Enum.Font.GothamBold, Enum.FontWeight.SemiBold),
