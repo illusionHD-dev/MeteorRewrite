@@ -3,6 +3,7 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local run = function(func)
 	func()
 end
@@ -3239,7 +3240,7 @@ run(function()
 end)
 local BetterSpeed
 run(function()
-    local Value
+    local SpeedValue
     local WallCheck
     local AutoJump
     local AlwaysJump
@@ -3251,7 +3252,7 @@ run(function()
     rayCheck.RespectCanCollide = true
 
     local pulseTick = 0
-    local pulseOn = false
+    local pulseState = true
 
     BetterSpeed = vape.Categories.Blatant:CreateModule({
         Name = 'BetterSpeed',
@@ -3259,18 +3260,23 @@ run(function()
             frictionTable.BetterSpeed = callback or nil
             updateVelocity()
 
-            -- Higher WindWalker multiplier
+            -- HARD WindWalker boost (numeric constant)
             pcall(function()
-                debug.setconstant(
-                    bedwars.WindWalkerController.updateSpeed,
-                    7,
-                    callback and 'constantSpeedMultiplier' or 'moveSpeedMultiplier'
-                )
+                for i, v in ipairs(debug.getconstants(bedwars.WindWalkerController.updateSpeed)) do
+                    if type(v) == 'number' and v > 1 and v < 1.3 then
+                        debug.setconstant(
+                            bedwars.WindWalkerController.updateSpeed,
+                            i,
+                            callback and 1.45 or v
+                        )
+                        break
+                    end
+                end
             end)
 
             if callback then
                 pulseTick = tick()
-                pulseOn = true
+                pulseState = true
 
                 BetterSpeed:Clean(runService.PreSimulation:Connect(function(dt)
                     if not entitylib.isAlive then return end
@@ -3286,19 +3292,18 @@ run(function()
                     if moveDir == Vector3.zero then return end
 
                     -- Pulse logic
-                    local speedMult = 1
+                    local mult = 1
                     if Pulse.Enabled then
-                        if tick() - pulseTick > PulseDelay.Value then
-                            pulseOn = not pulseOn
+                        if tick() - pulseTick >= PulseDelay.Value then
+                            pulseState = not pulseState
                             pulseTick = tick()
                         end
-                        speedMult = pulseOn and PulseStrength.Value or 1
+                        mult = pulseState and PulseStrength.Value or 1
                     end
 
                     local velo = getSpeed()
-                    local targetSpeed = Value.Value * speedMult
-                    local destination =
-                        moveDir * math.max(targetSpeed - velo, 0) * dt
+                    local target = SpeedValue.Value * mult
+                    local destination = moveDir * math.max(target - velo, 0) * dt
 
                     if WallCheck.Enabled then
                         rayCheck.FilterDescendantsInstances = { lplr.Character, gameCamera }
@@ -3325,14 +3330,14 @@ run(function()
         ExtraText = function()
             return Pulse.Enabled and 'Pulse' or 'Heatseeker'
         end,
-        Tooltip = 'High WindWalker speed with pulse bypass.'
+        Tooltip = 'High WindWalker speed with pulse bursts.'
     })
 
-    Value = BetterSpeed:CreateSlider({
+    SpeedValue = BetterSpeed:CreateSlider({
         Name = 'Speed',
         Min = 1,
-        Max = 20,
-        Default = 20,
+        Max = 30,
+        Default = 26,
         Suffix = function(v)
             return v == 1 and 'stud' or 'studs'
         end
@@ -3347,13 +3352,13 @@ run(function()
         Name = 'Pulse Strength',
         Min = 1,
         Max = 1.5,
-        Default = 1.37
+        Default = 1.25
     })
 
     PulseDelay = BetterSpeed:CreateSlider({
         Name = 'Pulse Delay',
-        Min = 0.1,
-        Max = 0.6,
+        Min = 0.15,
+        Max = 0.5,
         Default = 0.25,
         Suffix = 's'
     })
@@ -8941,6 +8946,74 @@ run(function()
     })
 end)
 
+run(function()
+    local AntiLagback
+
+    local lastSafeCFrame
+    local lastFix = 0
+    local COOLDOWN = 0.35
+
+    AntiLagback = vape.Categories.Utility:CreateModule({
+        Name = 'AntiLagback',
+        Function = function(enabled)
+            if not enabled then return end
+
+            local lastnetowner = true
+
+            -- cache last good position
+            AntiLagback:Clean(runService.Heartbeat:Connect(function()
+                local char = lplr.Character
+                local hrp = char and char:FindFirstChild('HumanoidRootPart')
+
+                if hrp and isnetworkowner(hrp) then
+                    lastSafeCFrame = hrp.CFrame
+                end
+            end))
+
+            local function fixLagback(reason)
+                if tick() - lastFix < COOLDOWN then return end
+                lastFix = tick()
+
+                local char = lplr.Character
+                local hrp = char and char:FindFirstChild('HumanoidRootPart')
+                if not hrp or not lastSafeCFrame then return end
+
+                hrp.CFrame = lastSafeCFrame
+                hrp.AssemblyLinearVelocity = Vector3.zero
+
+                vape:CreateNotification(
+                    'AntiLagback',
+                    'Corrected lagback (' .. reason .. ')',
+                    2
+                )
+            end
+
+            -- teleport attribute detection
+            AntiLagback:Clean(
+                lplr:GetAttributeChangedSignal('LastTeleported'):Connect(function()
+                    fixLagback('Teleport')
+                end)
+            )
+
+            -- network ownership loss detection
+            AntiLagback:Clean(runService.Heartbeat:Connect(function()
+                local char = lplr.Character
+                local hrp = char and char:FindFirstChild('HumanoidRootPart')
+
+                if hrp then
+                    local owner = isnetworkowner(hrp)
+                    if lastnetowner ~= owner then
+                        lastnetowner = owner
+                        if not owner then
+                            fixLagback('NetOwner')
+                        end
+                    end
+                end
+            end))
+        end,
+        Tooltip = 'TPs you back when a lagback is detected.'
+    })
+end)
 
 run(function()
 	local EmoteSpammer
