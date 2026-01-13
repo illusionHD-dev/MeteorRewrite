@@ -31,7 +31,7 @@ local playersService = cloneref(game:GetService('Players'))
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/illusionHD-dev/MeteorRewrite/'..readfile('newmeteorprofiles/commit.txt')..'/'..select(1, path:gsub('newmeteor', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/illusionHD-dev/MeteorRewrite/'..readfile('newmeteor/profiles/commit.txt')..'/'..select(1, path:gsub('newmeteor/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -61,9 +61,9 @@ local function finishLoading()
 			local teleportScript = [[
 				shared.vapereload = true
 				if shared.VapeDeveloper then
-					loadstring(readfile('newmeteorloader.lua'), 'loader')()
+					loadstring(readfile('newmeteor/loader.lua'), 'loader')()
 				else
-					loadstring(game:HttpGet('https://raw.githubusercontent.com/illusionHD-dev/MeteorRewrite/'..readfile('newmeteorprofiles/commit.txt')..'/loader.lua', true), 'loader')()
+					loadstring(game:HttpGet('https://raw.githubusercontent.com/illusionHD-dev/MeteorRewrite/'..readfile('newmeteor/profiles/commit.txt')..'/loader.lua', true), 'loader')()
 				end
 			]]
 			if shared.VapeDeveloper then
@@ -85,28 +85,28 @@ local function finishLoading()
 	end
 end
 
-if not isfile('newmeteorprofiles/gui.txt') then
-	writefile('newmeteorprofiles/gui.txt', 'new')
+if not isfile('newmeteor/profiles/gui.txt') then
+	writefile('newmeteor/profiles/gui.txt', 'new')
 end
-local gui = readfile('newmeteorprofiles/gui.txt')
+local gui = readfile('newmeteor/profiles/gui.txt')
 
-if not isfolder('newmeteorassets/'..gui) then
-	makefolder('newmeteorassets/'..gui)
+if not isfolder('newmeteor/assets/'..gui) then
+	makefolder('newmeteor/assets/'..gui)
 end
-vape = loadstring(downloadFile('newmeteorguis/'..gui..'.lua'), 'gui')()
+vape = loadstring(downloadFile('newmeteor/guis/'..gui..'.lua'), 'gui')()
 shared.vape = vape
 
 if not shared.VapeIndependent then
-	loadstring(downloadFile('newmeteorgames/universal.lua'), 'universal')()
-	if isfile('newmeteorgames/'..game.PlaceId..'.lua') then
-		loadstring(readfile('newmeteorgames/'..game.PlaceId..'.lua'), tostring(game.PlaceId))(...)
+	loadstring(downloadFile('newmeteor/games/universal.lua'), 'universal')()
+	if isfile('newmeteor/games/'..game.PlaceId..'.lua') then
+		loadstring(readfile('newmeteor/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))(...)
 	else
 		if not shared.VapeDeveloper then
 			local suc, res = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/illusionHD-dev/MeteorRewrite/'..readfile('newmeteorprofiles/commit.txt')..'/games/'..game.PlaceId..'.lua', true)
+				return game:HttpGet('https://raw.githubusercontent.com/illusionHD-dev/MeteorRewrite/'..readfile('newmeteor/profiles/commit.txt')..'/games/'..game.PlaceId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
-				loadstring(downloadFile('newmeteorgames/'..game.PlaceId..'.lua'), tostring(game.PlaceId))(...)
+				loadstring(downloadFile('newmeteor/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))(...)
 			end
 		end
 	end
