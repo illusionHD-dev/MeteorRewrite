@@ -1,5 +1,6 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local loadstring = function(...)
 	local res, err = loadstring(...)
 	if err and vape then
@@ -3460,7 +3461,106 @@ run(function()
 		Suffix = '%'
 	})
 end)
-	
+run(function()
+    local TargetFollow
+    local Targets
+    local FollowDistance
+    local FollowHeight
+    local SearchRange
+    local rayCheck = RaycastParams.new()
+    rayCheck.RespectCanCollide = true
+    rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
+    
+    local module, oldMoveFunction, lastTarget
+    
+    TargetFollow = vape.Categories.Blatant:CreateModule({
+        Name = 'TargetStrafe +',
+        Tooltip = 'Keeps you behind the target at all times',
+        Function = function(enabled)
+            if enabled then
+                if not module then
+                    local suc = pcall(function() module = require(lplr.PlayerScripts.PlayerModule).controls end)
+                    if not suc then
+                        module = {}
+                    end
+                end
+
+                oldMoveFunction = module.moveFunction
+
+                local flyMod = vape.Modules.Fly or {Enabled = false}
+
+                module.moveFunction = function(self, vec, face)
+                    local ent = entitylib.EntityPosition({
+                        Range = SearchRange.Value,
+                        Wallcheck = Targets.Walls.Enabled,
+                        Part = 'RootPart',
+                        Players = Targets.Players.Enabled,
+                        NPCs = Targets.NPCs.Enabled
+                    })
+
+                    if ent then
+                        lastTarget = ent
+                        local root = entitylib.character.RootPart
+                        local targetPos = ent.RootPart.Position
+
+                        -- direction vector behind the target
+                        local behindDir = -ent.RootPart.CFrame.LookVector -- negative to go behind
+                        local desiredPos = targetPos + (behindDir * FollowDistance.Value) + Vector3.new(0, FollowHeight.Value, 0)
+
+                        -- raycast to avoid walls
+                        local ray = workspace:Raycast(root.Position, (desiredPos - root.Position), rayCheck)
+                        if ray then
+                            desiredPos = ray.Position + ray.Normal * 1.5
+                        end
+
+                        vec = ((desiredPos - root.Position) * Vector3.new(1, 0, 1)).Unit
+                        vec = vec == vec and vec or Vector3.zero
+                    else
+                        vec = nil
+                        lastTarget = nil
+                    end
+
+                    return oldMoveFunction and oldMoveFunction(self, vec, face) or vec
+                end
+            else
+                if module and oldMoveFunction then
+                    module.moveFunction = oldMoveFunction
+                end
+                lastTarget = nil
+            end
+        end
+    })
+
+    Targets = TargetFollow:CreateTargets({
+        Players = true,
+        Walls = true
+    })
+
+    SearchRange = TargetFollow:CreateSlider({
+        Name = 'Search Range',
+        Min = 1,
+        Max = 30,
+        Default = 24,
+        Suffix = function(val) return val == 1 and 'stud' or 'studs' end
+    })
+
+    FollowDistance = TargetFollow:CreateSlider({
+        Name = 'Follow Distance',
+        Min = 2,
+        Max = 20,
+        Default = 6,
+        Suffix = 'studs'
+    })
+
+    FollowHeight = TargetFollow:CreateSlider({
+        Name = 'Height Offset',
+        Min = -5,
+        Max = 5,
+        Default = 0,
+        Suffix = 'studs'
+    })
+end)
+
 run(function()
 	local Timer
 	local Value
@@ -7447,15 +7547,8 @@ run(function()
 	local part: any, motor: any
 	local CapeMode: table = {["Value"] = "Velocity"}
 	local capeModeMap: table = {
-		["Vape"] = "rbxassetid://13380453812",
-		["Portal"] = "rbxassetid://14694086869",
-		["Copium"] = "rbxassetid://14694061995",
-		["Velocity"] = "rbxassetid://16728149213",
-		["Azura"] = "rbxassetid://128937881305197",
-		["Ape"] = "rbxassetid://93367474508586",
-		["Laserware"] = "rbxassetid://125791563280089",
-		["Snoopy"] = "rbxassetid://89328429998004",
-		["Render"] = "rbxassetid://17140106485"
+		["meteor"] = "rbxassetid://133085514055069",
+		["meteor2"] = "rbxassetid://101555468505349"
 	}
 	local function createMotor(char)
 		if motor then 
@@ -7476,7 +7569,7 @@ run(function()
 		["Function"] = function(callback: boolean): void
 			if callback then
 				part = Instance.new('Part')
-				part.Size = Vector3.new(2, 4, 0.1)
+				part.Size = Vector3.new(2, 3.15, 0.1)
 				part.CanCollide = false
 				part.CanQuery = false
 				part.Massless = true
@@ -7533,15 +7626,8 @@ run(function()
 	CapeMode = Cape:CreateDropdown({
 		["Name"] ='Mode',
 		["List"] = {
-			'Vape',
-			'Render',
-			'Portal',
-			'Copium',
-			'Azura',
-			'Ape',
-			'Laserware',
-			'Snoopy',
-			'Velocity'
+			'meteor',
+			'meteor2'
 		},
 		["HoverText"] = 'A cape mod.',
 		["Value"] = 'Velocity',
