@@ -1,6 +1,7 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 local loadstring = function(...)
 	local res, err = loadstring(...)
 	if err and vape then
@@ -7540,105 +7541,259 @@ run(function()
 		end
 	})
 end)
-	
+--[[run(function()
+	-- Head Spin / Rotation Module
+	local HeadSpin = { Enabled = false }
+
+	-- UI values
+	local SpinSpeed
+	local RotX
+	local RotY
+	local RotZ
+
+	-- Runtime
+	local neckMotor
+	local baseC0
+
+	local function getNeck(char)
+		if not char or not char.Character then return nil end
+		local c = char.Character
+
+		-- R15
+		local head = c:FindFirstChild("Head")
+		if head then
+			local upper = c:FindFirstChild("UpperTorso")
+			if upper then
+				local neck = upper:FindFirstChildWhichIsA("Motor6D")
+				if neck and neck.Part1 == head then
+					return neck
+				end
+			end
+		end
+
+		-- R6
+		local torso = c:FindFirstChild("Torso")
+		if torso then
+			local neck = torso:FindFirstChild("Neck")
+			if neck and neck:IsA("Motor6D") then
+				return neck
+			end
+		end
+
+		return nil
+	end
+
+	local function bindNeck(char)
+		neckMotor = getNeck(char)
+		if neckMotor then
+			baseC0 = neckMotor.C0
+		end
+	end
+
+	HeadSpin = vape.Categories.Combat:CreateModule({
+		Name = "HeadSpin",
+		Tooltip = "Rotate your head with configurable spin and offsets",
+
+		Function = function(callback)
+			if callback then
+				HeadSpin:Clean(entitylib.Events.LocalAdded:Connect(bindNeck))
+				if entitylib.isAlive then
+					bindNeck(entitylib.character)
+				end
+
+				local t = 0
+				repeat
+					if neckMotor and baseC0 then
+						t += task.wait()
+
+						local spin = math.rad((SpinSpeed.Value or 0) * t)
+						local rx = math.rad(RotX.Value or 0)
+						local ry = math.rad(RotY.Value or 0)
+						local rz = math.rad(RotZ.Value or 0)
+
+						neckMotor.C0 =
+							baseC0
+							* CFrame.Angles(rx, ry + spin, rz)
+					else
+						task.wait()
+					end
+				until not HeadSpin.Enabled
+			else
+				-- restore original orientation
+				if neckMotor and baseC0 then
+					neckMotor.C0 = baseC0
+				end
+				neckMotor = nil
+				baseC0 = nil
+			end
+		end
+	})
+
+	-- UI
+	SpinSpeed = HeadSpin:CreateSlider({
+		Name = "Spin Speed",
+		Min = -360,
+		Max = 360,
+		Default = 90,
+		Suffix = "deg/s"
+	})
+
+	RotX = HeadSpin:CreateSlider({
+		Name = "Rotate X",
+		Min = -90,
+		Max = 90,
+		Default = 0,
+		Suffix = "°"
+	})
+
+	RotY = HeadSpin:CreateSlider({
+		Name = "Rotate Y",
+		Min = -180,
+		Max = 180,
+		Default = 0,
+		Suffix = "°"
+	})
+
+	RotZ = HeadSpin:CreateSlider({
+		Name = "Rotate Z",
+		Min = -90,
+		Max = 90,
+		Default = 0,
+		Suffix = "°"
+	})
+end)
+
 run(function()
-	local Cape: table = {["Enabled"] = false};
-	local Texture: any;
-	local part: any, motor: any
-	local CapeMode: table = {["Value"] = "Velocity"}
-	local capeModeMap: table = {
+	local Elytra: table = {["Enabled"] = false}
+	local Texture: any
+
+	local leftWing, rightWing
+	local leftMotor, rightMotor
+
+	local modeMap = {
 		["meteor"] = "rbxassetid://133085514055069",
 		["meteor2"] = "rbxassetid://101555468505349"
 	}
-	local function createMotor(char)
-		if motor then 
-			motor:Destroy() 
+
+	local function makeWing(side, char)
+		local wing = Instance.new("Part")
+		wing.Size = Vector3.new(1.3, 3.15, 0.05) -- 100 x 315
+		wing.CanCollide = false
+		wing.CanQuery = false
+		wing.Massless = true
+		wing.Transparency = 0
+		wing.Material = Enum.Material.SmoothPlastic
+		wing.Color = Color3.new()
+		wing.CastShadow = false
+		wing.Parent = gameCamera
+
+		local surface = Instance.new("SurfaceGui")
+		surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		surface.Face = Enum.NormalId.Back
+		surface.Adornee = wing
+		surface.Parent = wing
+
+		local img = Instance.new("ImageLabel")
+		img.Size = UDim2.fromScale(1, 1)
+		img.BackgroundTransparency = 1
+		img.Image = Texture.Value ~= ""
+			and (Texture.Value:find("rbxasset") and Texture.Value or assetfunction(Texture.Value))
+			or "rbxassetid://14637958134"
+
+		-- mirror right wing
+		if side == "Right" then
+			img.AnchorPoint = Vector2.new(2, 2)
+			img.Position = UDim2.fromScale(2, 3)
+			img.Size = UDim2.fromScale(-1, 3)
 		end
-		part.Parent = gameCamera
-		motor = Instance.new('Motor6D')
-		motor.MaxVelocity = 0.08
-		motor.Part0 = part
-		motor.Part1 = char.Character:FindFirstChild('UpperTorso') or char.RootPart
-		motor.C0 = CFrame.new(0, 2, 0) * CFrame.Angles(0, math.rad(-90), 0)
-		motor.C1 = CFrame.new(0, motor.Part1.Size.Y / 2, 0.45) * CFrame.Angles(0, math.rad(90), 0)
-		motor.Parent = part
+
+		img.Parent = surface
+
+		local motor = Instance.new("Motor6D")
+		motor.MaxVelocity = 0.15
+		motor.Part0 = wing
+		motor.Part1 = char.Character:FindFirstChild("UpperTorso") or char.RootPart
+
+		-- ✅ FIXED: upper back placement
+		motor.C0 =
+			CFrame.new(side == "Left" and -0.6 or 0.6, 1.9, 0.35)
+			* CFrame.Angles(0, math.rad(side == "Left" and 25 or -25), 0)
+
+		motor.C1 = CFrame.new(0, 0.9, 0.25)
+
+		motor.Parent = wing
+		return wing, motor
 	end
-	
-	Cape = vape.Legit:CreateModule({
-		["Name"] = 'Cape',
-		["Function"] = function(callback: boolean): void
+
+	local function createElytra(char)
+		if leftMotor then leftMotor:Destroy() end
+		if rightMotor then rightMotor:Destroy() end
+
+		leftWing, leftMotor = makeWing("Left", char)
+		rightWing, rightMotor = makeWing("Right", char)
+
+		Elytra:Clean(leftWing)
+		Elytra:Clean(rightWing)
+	end
+
+	Elytra = vape.Legit:CreateModule({
+		["Name"] = "Elytra",
+		["Tooltip"] = "Minecraft-style Elytra wings",
+
+		["Function"] = function(callback: boolean)
 			if callback then
-				part = Instance.new('Part')
-				part.Size = Vector3.new(2, 3.15, 0.1)
-				part.CanCollide = false
-				part.CanQuery = false
-				part.Massless = true
-				part.Transparency = 0
-				part.Material = Enum.Material.SmoothPlastic
-				part.Color = Color3.new()
-				part.CastShadow = false
-				part.Parent = gameCamera
-				local capesurface = Instance.new('SurfaceGui')
-				capesurface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-				capesurface.Adornee = part
-				capesurface.Parent = part
-	
-				if Texture.Value:find('.webm') then
-					local decal = Instance.new('VideoFrame')
-					decal.Video = getcustomasset(Texture.Value)
-					decal.Size = UDim2.fromScale(1, 1)
-					decal.BackgroundTransparency = 1
-					decal.Looped = true
-					decal.Parent = capesurface
-					decal:Play()
-				else
-					local decal = Instance.new('ImageLabel')
-					decal.Image = Texture.Value ~= '' and (Texture.Value:find('rbxasset') and Texture.Value or assetfunction(Texture.Value)) or 'rbxassetid://14637958134'
-					decal.Size = UDim2.fromScale(1, 1)
-					decal.BackgroundTransparency = 1
-					decal.Parent = capesurface
-				end
-				Cape:Clean(part)
-				Cape:Clean(entitylib.Events.LocalAdded:Connect(createMotor))
+				Elytra:Clean(entitylib.Events.LocalAdded:Connect(createElytra))
 				if entitylib.isAlive then
-					createMotor(entitylib.character)
+					createElytra(entitylib.character)
 				end
-	
+
 				repeat
-					if motor and entitylib.isAlive then
-						local velo = math.min(entitylib.character.RootPart.Velocity.Magnitude, 90)
-						motor.DesiredAngle = math.rad(6) + math.rad(velo) + (velo > 1 and math.abs(math.cos(tick() * 5)) / 3 or 0)
+					if entitylib.isAlive and leftMotor and rightMotor then
+						local velo = math.clamp(
+							entitylib.character.RootPart.Velocity.Magnitude,
+							0,
+							90
+						)
+
+						-- Elytra spread (fold slow, open fast)
+						local spread = math.rad(20 + velo / 2)
+						leftMotor.DesiredAngle = spread
+						rightMotor.DesiredAngle = -spread
 					end
-					capesurface["Enabled"] = (gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude > 0.6
-					part.Transparency = (gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude > 0.6 and 0 or 1
+
+					local visible =
+						(gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude > 0.6
+
+					if leftWing then leftWing.Transparency = visible and 0 or 1 end
+					if rightWing then rightWing.Transparency = visible and 0 or 1 end
+
 					task.wait()
-				until not Cape["Enabled"]
+				until not Elytra.Enabled
 			else
-				part = nil
-				motor = nil
+				leftWing = nil
+				rightWing = nil
+				leftMotor = nil
+				rightMotor = nil
 			end
-		end,
-		["Tooltip"] = 'Add\'s a cape to your character'
+		end
 	})
-	Texture = Cape:CreateTextBox({
-		["Name"] = 'Texture'
+
+	Texture = Elytra:CreateTextBox({
+		["Name"] = "Texture"
 	})
-	CapeMode = Cape:CreateDropdown({
-		["Name"] ='Mode',
-		["List"] = {
-			'meteor',
-			'meteor2'
-		},
-		["HoverText"] = 'A cape mod.',
-		["Value"] = 'Velocity',
-		["Function"] = function(val) 
-			if capeModeMap[val] then
-                		Texture["Value"] = capeModeMap[val]
-            		end
+
+	Elytra:CreateDropdown({
+		["Name"] = "Mode",
+		["List"] = { "meteor", "meteor2" },
+		["Value"] = "meteor",
+		["Function"] = function(val)
+			if modeMap[val] then
+				Texture.Value = modeMap[val]
+			end
 		end
 	})
 end)
-	
+
 run(function()
 	local ChinaHat
 	local Material
@@ -7717,8 +7872,226 @@ run(function()
 			end
 		end
 	})
+end)]]
+run(function()
+	local Cosmetics
+	local ChinaHatToggle, CapeToggle
+	local HatMaterial, HatColor
+	local CapeTexture, CapeMode
+
+	local hat
+	local capePart, capeMotor
+
+	-- ===== China Hat helpers =====
+	local function createHat()
+		if hat then hat:Destroy() end
+
+		hat = Instance.new("MeshPart")
+		hat.Size = Vector3.new(3, 0.7, 3)
+		hat.Name = "ChinaHat"
+		hat.Material = Enum.Material[HatMaterial.Value]
+		hat.Color = Color3.fromHSV(HatColor.Hue, HatColor.Sat, HatColor.Value)
+		hat.Transparency = 1 - HatColor.Opacity
+		hat.CanCollide = false
+		hat.CanQuery = false
+		hat.Massless = true
+		hat.MeshId = "http://www.roblox.com/asset/?id=1778999"
+		hat.Parent = gameCamera
+
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = hat
+		weld.Part1 = entitylib.isAlive and entitylib.character.Head or nil
+		weld.Parent = hat
+
+		if entitylib.isAlive then
+			hat.CFrame = entitylib.character.Head.CFrame + Vector3.new(0, 1, 0)
+		end
+
+		Cosmetics:Clean(hat)
+		Cosmetics:Clean(entitylib.Events.LocalAdded:Connect(function(char)
+			if weld then weld:Destroy() end
+			hat.Parent = gameCamera
+			hat.CFrame = char.Head.CFrame + Vector3.new(0, 1, 0)
+			weld = Instance.new("WeldConstraint")
+			weld.Part0 = hat
+			weld.Part1 = char.Head
+			weld.Parent = hat
+		end))
+	end
+
+	local function destroyHat()
+		if hat then
+			hat:Destroy()
+			hat = nil
+		end
+	end
+
+	-- ===== Cape helpers =====
+	local capeModeMap = {
+		meteor = "rbxassetid://133085514055069",
+		meteor2 = "rbxassetid://101555468505349"
+	}
+
+	local function createCapeMotor(char)
+		if capeMotor then capeMotor:Destroy() end
+		if not capePart then return end
+
+		capePart.Parent = gameCamera
+		capeMotor = Instance.new("Motor6D")
+		capeMotor.MaxVelocity = 0.08
+		capeMotor.Part0 = capePart
+		capeMotor.Part1 = char.Character:FindFirstChild("UpperTorso") or char.RootPart
+		capeMotor.C0 = CFrame.new(0, 1.8, 0) * CFrame.Angles(0, math.rad(-90), 0)
+		capeMotor.C1 = CFrame.new(0, capeMotor.Part1.Size.Y / 2, 0.45) * CFrame.Angles(0, math.rad(90), 0)
+		capeMotor.Parent = capePart
+	end
+
+	local function createCape()
+		if capePart then capePart:Destroy() end
+
+		capePart = Instance.new("Part")
+		capePart.Size = Vector3.new(2, 3.5, 0.1)
+		capePart.CanCollide = false
+		capePart.CanQuery = false
+		capePart.Massless = true
+		capePart.Transparency = 0
+		capePart.Material = Enum.Material.SmoothPlastic
+		capePart.Color = Color3.new()
+		capePart.CastShadow = false
+		capePart.Parent = gameCamera
+
+		local surface = Instance.new("SurfaceGui")
+		surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		surface.Adornee = capePart
+		surface.Parent = capePart
+
+		if CapeTexture.Value:find(".webm") then
+			local video = Instance.new("VideoFrame")
+			video.Video = getcustomasset(CapeTexture.Value)
+			video.Size = UDim2.fromScale(1, 1)
+			video.BackgroundTransparency = 1
+			video.Looped = true
+			video.Parent = surface
+			video:Play()
+		else
+			local img = Instance.new("ImageLabel")
+			img.Image = CapeTexture.Value ~= "" and (CapeTexture.Value:find("rbxasset") and CapeTexture.Value or assetfunction(CapeTexture.Value))
+				or "rbxassetid://14637958134"
+			img.Size = UDim2.fromScale(1, 1)
+			img.BackgroundTransparency = 1
+			img.Parent = surface
+		end
+
+		Cosmetics:Clean(capePart)
+		Cosmetics:Clean(entitylib.Events.LocalAdded:Connect(createCapeMotor))
+		if entitylib.isAlive then
+			createCapeMotor(entitylib.character)
+		end
+	end
+
+	local function destroyCape()
+		if capePart then
+			capePart:Destroy()
+			capePart = nil
+			capeMotor = nil
+		end
+	end
+
+	-- ===== Main module =====
+	Cosmetics = vape.Categories.Render:CreateModule({
+		Name = "Cosmetics",
+		Tooltip = "Client-side cosmetic visuals"
+	})
+
+	-- China Hat toggle
+	ChinaHatToggle = Cosmetics:CreateToggle({
+		Name = "China Hat",
+		Function = function(enabled)
+			if enabled then
+				createHat()
+			else
+				destroyHat()
+			end
+		end
+	})
+
+	local materials = {"ForceField"}
+	for _, v in Enum.Material:GetEnumItems() do
+		if v.Name ~= "ForceField" then
+			table.insert(materials, v.Name)
+		end
+	end
+
+	HatMaterial = Cosmetics:CreateDropdown({
+		Name = "Hat Material",
+		List = materials,
+		Function = function(val)
+			if hat then
+				hat.Material = Enum.Material[val]
+			end
+		end
+	})
+
+	HatColor = Cosmetics:CreateColorSlider({
+		Name = "Hat Color",
+		DefaultOpacity = 0.7,
+		Function = function(h, s, v, o)
+			if hat then
+				hat.Color = Color3.fromHSV(h, s, v)
+				hat.Transparency = 1 - o
+			end
+		end
+	})
+
+	-- Cape toggle
+	CapeToggle = Cosmetics:CreateToggle({
+		Name = "Cape",
+		Function = function(enabled)
+			if enabled then
+				createCape()
+			else
+				destroyCape()
+			end
+		end
+	})
+
+	CapeTexture = Cosmetics:CreateTextBox({
+		Name = "Cape Texture"
+	})
+
+	CapeMode = Cosmetics:CreateDropdown({
+		Name = "Cape Preset",
+		List = {"meteor", "meteor2"},
+		Function = function(val)
+			if capeModeMap[val] then
+				CapeTexture.Value = capeModeMap[val]
+			end
+		end
+	})
+
+	-- ===== Render update loop =====
+	Cosmetics:Clean(task.spawn(function()
+		while true do
+			if ChinaHatToggle.Enabled and hat then
+				hat.LocalTransparencyModifier =
+					((gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude <= 0.6 and 1 or 0)
+			end
+
+			if CapeToggle.Enabled and capePart and capeMotor and entitylib.isAlive then
+				local velo = math.min(entitylib.character.RootPart.Velocity.Magnitude, 90)
+				capeMotor.DesiredAngle =
+					math.rad(6) + math.rad(velo) +
+					(velo > 1 and math.abs(math.cos(tick() * 5)) / 3 or 0)
+
+				local visible = (gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude > 0.6
+				capePart.Transparency = visible and 0 or 1
+			end
+
+			task.wait()
+		end
+	end))
 end)
-	
+
 run(function()
 	local Clock
 	local TwentyFourHour
